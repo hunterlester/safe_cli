@@ -11,10 +11,11 @@ fn connected(auth: Authenticator) -> () {
   println!("Logged in to SAFE network.")
 }
 
-fn validate_cred(cred: String) -> String {
+fn validate_cred(cred: &'static str) -> String {
     println!("Please choose a {}:", &cred);
     let mut secret = String::new();
-    io::stdin().read_line(&mut secret).expect("Please enter valid string");;
+    io::stdin().read_line(&mut secret).expect("Please enter valid string");
+    secret = secret.trim().to_string();
     let secret_strength = zxcvbn(&mut secret, &[]).unwrap();
     println!("\nInteresting information about your {}:\n
       Estimated number of guesses needed to crack: {:?}\n
@@ -29,6 +30,7 @@ fn validate_cred(cred: String) -> String {
       println!("Please type in your {} again to confirm:", &cred);
       let mut secret_compare = String::new();
       io::stdin().read_line(&mut secret_compare).expect("Please enter valid string");
+      secret_compare = secret_compare.trim().to_string();
       if &mut secret == &mut secret_compare {
         secret
       } else {
@@ -73,10 +75,9 @@ fn main() {
 
     match matches.value_of("create_acc") {
       Some(invite) => {
-          println!("invite code: {:?}", &invite);
-          let secret = validate_cred(String::from("secret"));
+          let secret = validate_cred("secret");
           println!("\u{2705}Valid secret");
-          let password = validate_cred(String::from("password"));
+          let password = validate_cred("password");
           println!("\u{2705}Valid password");
           match Authenticator::create_acc(secret, password, String::from(invite), || println!("Disconnected from network")) {
             Ok(auth) =>  connected(auth),
@@ -85,5 +86,6 @@ fn main() {
       },
       None => (),
     }
-
 }
+
+
