@@ -1,11 +1,15 @@
 extern crate clap;
 extern crate safe_authenticator;
 extern crate zxcvbn;
+extern crate tiny_keccak;
+
+mod crypto;
 
 use clap::{ Arg, App };
 use safe_authenticator::{ Authenticator };
 use zxcvbn::zxcvbn;
 use std::io;
+use crypto::sha3_hash;
 
 fn connected(auth: Authenticator) -> () {
   println!("Logged in to SAFE network.")
@@ -60,6 +64,13 @@ fn main() {
                                .number_of_values(1)
                                .value_names(&["invitation"])
                                .help("Create new account with SAFE network with name, password, and invitation key"))
+                          .arg(Arg::with_name("sha3_hash")
+                               .short("s")
+                               .long("sha3_hash")
+                               .takes_value(true)
+                               .number_of_values(1)
+                               .value_names(&["string"])
+                               .help("FIPS-202-defined SHA-3 Hash using 32 bit words (SHA3-256)"))
                           .get_matches();
 
     match matches.values_of("login") {
@@ -83,6 +94,14 @@ fn main() {
             Ok(auth) =>  connected(auth),
             Err(auth_error) => println!("Failed to create account: {:?}", &auth_error),
           }
+      },
+      None => (),
+    }
+
+    match matches.value_of("sha3_hash") {
+      Some(data) => {
+        let hash = sha3_hash(String::from(data));
+        println!("sha3 256 hash: {:?}", hash);
       },
       None => (),
     }
