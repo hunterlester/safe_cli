@@ -4,4 +4,11 @@ version = "0.1.0"
 authors = ["hunterlester <guilfordhunter@gmail.com>"]
 
 [dependencies]
-clap = "2.30"
+clap = "2.25.1"
+safe_authenticator = "0.6.0"
+zxcvbn = "1.0.0"
+
+[features]
+testing = ["safe_authenticator/testing"]
+use-mock-routing = ["testing", "safe_authenticator/use-mock-routing"]
+default = ["use-mock-routing"]
