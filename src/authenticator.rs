@@ -32,7 +32,7 @@ fn validate_cred(cred: &'static str) -> String {
     }
 }
 
-pub fn create_acc() -> Result<Authenticator, AuthError> {
+pub fn create_acc() -> Option<Result<Authenticator, AuthError>> {
     let secret = validate_cred("secret");
     println!("\u{2705}Valid secret");
     let password = validate_cred("password");
@@ -44,16 +44,16 @@ pub fn create_acc() -> Result<Authenticator, AuthError> {
     match Authenticator::create_acc(secret, password, invite, || println!("Disconnected from network")) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());
-          Ok(auth)
+          Some(Ok(auth))
       },
       Err(auth_error) => {
           println!("Failed to create account: {:?}", &auth_error);
-          Err(auth_error)
+          Some(Err(auth_error))
       },
     }
 }
 
-pub fn login() -> Result<Authenticator, AuthError> {
+pub fn login() -> Option<Result<Authenticator, AuthError>> {
       println!("Please enter your secret:");
       let mut secret = String::new();
       io::stdin().read_line(&mut secret).expect("Please enter valid string");
@@ -65,11 +65,11 @@ pub fn login() -> Result<Authenticator, AuthError> {
       match Authenticator::login(secret, password, || println!("Disconnected from network")) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());
-          Ok(auth)
+          Some(Ok(auth))
       },
       Err(auth_error) => {
           println!("Login failed: {:?}", &auth_error);
-          Err(auth_error)
+          Some(Err(auth_error))
       },
     }
 }
