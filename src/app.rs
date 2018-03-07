@@ -2,6 +2,7 @@ use safe_core::ipc::req::{ Permission, AppExchangeInfo, AuthReq };
 use safe_authenticator::{ Authenticator, AuthError };
 use safe_core::ipc::resp::AuthGranted;
 use safe_authenticator::test_utils::register_app;
+use safe_app::{ App, AppError };
 use std::io;
 use std::collections::{ BTreeSet, HashMap };
 use console::style;
@@ -78,4 +79,9 @@ pub fn authorise(app_info: AppExchangeInfo, auth: &Authenticator) -> Option<Resu
        println!("{}", style("Auth denied").red().bold());
        Some(Err(AuthError::Unexpected(String::from("User denied auth"))))
    }
+}
+
+pub fn registered(app_info: AppExchangeInfo, auth_granted: AuthGranted) -> Option<Result<App, AppError>> {
+   let app = App::registered(app_info.id, auth_granted, || println!("{}", style("Disconnected from network.").red().bold()));
+   Some(app)
 }
