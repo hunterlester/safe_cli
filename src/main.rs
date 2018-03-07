@@ -79,6 +79,14 @@ fn main() {
                      &None => println!("{}", style("First use 'initialise' command to generate AppExchangeInfo").red().bold()),
                  } 
             },
+            "commands" => {
+                println!("{}", style("create_acc").magenta().bold());    
+                println!("{}", style("login").magenta().bold());    
+                println!("{}", style("initialise").magenta().bold());    
+                println!("{}", style("authorise").magenta().bold());    
+                println!("{}", style("registered").magenta().bold());    
+                println!("{}", style("sha3_hash").magenta().bold());    
+            },
             _ => println!("{}", style("Command not yet implemented or recognised").red().bold()),
         }
     }
