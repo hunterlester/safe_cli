@@ -3,9 +3,9 @@ use safe_authenticator::{ Authenticator, AuthError };
 use safe_core::ipc::resp::AuthGranted;
 use safe_authenticator::test_utils::register_app;
 use safe_app::{ App, AppError };
-use std::io;
 use std::collections::{ BTreeSet, HashMap };
 use console::style;
+use helpers::{ read_line };
 
 pub fn initialise() -> Option<AppExchangeInfo> {
     let mut id = String::new();
@@ -13,22 +13,21 @@ pub fn initialise() -> Option<AppExchangeInfo> {
     let mut vendor = String::new();
     let mut scope = String::new();
     println!("{}", style("Enter app ID:").cyan().bold());
-    io::stdin().read_line(&mut id).expect("String");
+    id = read_line(&mut id);
     
     println!("{}", style("Enter app name:").cyan().bold());
-    io::stdin().read_line(&mut name).expect("String");
+    name = read_line(&mut name);
 
     println!("{}", style("Enter app vendor name:").cyan().bold());
-    io::stdin().read_line(&mut vendor).expect("String");
+    vendor = read_line(&mut vendor);
 
     println!("{}", style("Enter app scope (optional):").cyan().bold());
-    io::stdin().read_line(&mut scope).expect("String");
-    scope = scope.trim().to_string();
+    scope = read_line(&mut scope);
 
     Some(AppExchangeInfo {
-      id: id.trim().to_string(),
-      name: name.trim().to_string(),
-      vendor: vendor.trim().to_string(),
+      id: id,
+      name: name,
+      vendor: vendor,
       scope: match scope.len() {
           0 => None,
           _ => Some(scope),
@@ -40,7 +39,7 @@ pub fn authorise(app_info: AppExchangeInfo, auth: &Authenticator) -> Option<Resu
    let mut user_container_dec = String::new();
    println!("Creating permissions for {:?}", app_info.name);
    println!("{}", style("Create root container for app? y/n").cyan().bold());
-   io::stdin().read_line(&mut user_container_dec).expect("String");
+   user_container_dec = read_line(&mut user_container_dec);
 
    let mut permissions = BTreeSet::new();
    permissions.insert(Permission::Read);
@@ -64,7 +63,7 @@ pub fn authorise(app_info: AppExchangeInfo, auth: &Authenticator) -> Option<Resu
    };
    let mut auth_dec = String::new();
    println!("{}", style("Be aware that interactions with the network will occur on your behalf by this application. Do you grant authority? y/n").red().bold());
-   io::stdin().read_line(&mut auth_dec).expect("String");
+   auth_dec = read_line(&mut auth_dec);
    let is_granted = match auth_dec.trim() {
      "y" => true,
       "n" => false,

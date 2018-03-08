@@ -1,11 +1,10 @@
 use tiny_keccak::Keccak;
-use std::io;
+use helpers::{ read_line };
 
 pub fn sha3_hash() -> Option<[u8; 32]> {
   println!("Please enter your secret:");
   let mut data = String::new();
-  io::stdin().read_line(&mut data).expect("Please enter valid string");
-  data = data.trim().to_string();
+  data = read_line(&mut data);
   let mut sha3 = Keccak::new_sha3_256();
   let data: Vec<u8> = From::from(data);
   sha3.update(&data);

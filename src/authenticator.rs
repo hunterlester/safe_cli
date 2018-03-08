@@ -1,13 +1,12 @@
 use safe_authenticator::{ Authenticator, AuthError };
 use zxcvbn::zxcvbn;
-use std::io;
 use console::style;
+use helpers::{ read_line };
 
 fn validate_cred(cred: &'static str) -> String {
     println!("Please choose a {}:", &cred);
     let mut secret = String::new();
-    io::stdin().read_line(&mut secret).expect("Please enter valid string");
-    secret = secret.trim().to_string();
+    secret = read_line(&mut secret);
     let secret_strength = zxcvbn(&mut secret, &[]).unwrap();
     println!("\nInteresting information about your {}:\n
       Estimated number of guesses needed to crack: {:?}\n
@@ -21,8 +20,7 @@ fn validate_cred(cred: &'static str) -> String {
     } else {
       println!("Please type in your {} again to confirm:", &cred);
       let mut secret_compare = String::new();
-      io::stdin().read_line(&mut secret_compare).expect("Please enter valid string");
-      secret_compare = secret_compare.trim().to_string();
+      secret_compare = read_line(&mut secret_compare);
       if &mut secret == &mut secret_compare {
         secret
       } else {
@@ -39,8 +37,7 @@ pub fn create_acc() -> Option<Result<Authenticator, AuthError>> {
     println!("\u{2705}Valid password");
     println!("Please enter your invite code:");
     let mut invite = String::new();
-    io::stdin().read_line(&mut invite).expect("Please enter valid string");
-    invite = invite.trim().to_string();
+    invite = read_line(&mut invite);
     match Authenticator::create_acc(secret, password, invite, || println!("Disconnected from network")) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());
@@ -56,12 +53,10 @@ pub fn create_acc() -> Option<Result<Authenticator, AuthError>> {
 pub fn login() -> Option<Result<Authenticator, AuthError>> {
       println!("Please enter your secret:");
       let mut secret = String::new();
-      io::stdin().read_line(&mut secret).expect("Please enter valid string");
-      secret = secret.trim().to_string();
+      secret = read_line(&mut secret);
       println!("Please enter your password:");
       let mut password = String::new();
-      io::stdin().read_line(&mut password).expect("Please enter valid string");
-      password = password.trim().to_string();
+      password = read_line(&mut password);
       match Authenticator::login(secret, password, || println!("Disconnected from network")) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());

@@ -1,6 +1,7 @@
 mod authenticator;
 mod crypto;
 mod app;
+mod helpers;
 
 extern crate safe_authenticator;
 extern crate safe_core;
@@ -10,7 +11,6 @@ extern crate tiny_keccak;
 extern crate console;
 
 use console::style;
-use std::io;
 use authenticator::{ create_acc, login };
 use crypto::sha3_hash;
 use app::{ initialise, authorise, registered };
@@ -18,6 +18,7 @@ use safe_authenticator::{ Authenticator, AuthError };
 use safe_core::ipc::req::{ AppExchangeInfo };
 use safe_core::ipc::resp::AuthGranted;
 use safe_app::{ App, AppError };
+use helpers::{ read_line };
 
 fn main() {
     let mut auth: Option<Result<Authenticator, AuthError>> = None;
@@ -26,10 +27,11 @@ fn main() {
     let mut auth_granted: Option<Result<AuthGranted, AuthError>> = None;
     let mut app: Option<Result<App, AppError>>;
     loop {
-        println!("{}", style("SAFE CLI (enter command):").blue().bold());
+        println!("{}", style("SAFE CLI (enter command):").yellow().bold());
         let mut command = String::new();
-        io::stdin().read_line(&mut command).expect("Please enter valid string");
-        match command.trim() {
+        command = read_line(&mut command);
+
+        match command.as_str() {
             "create_acc" => auth = create_acc(),
             "login" => auth = login(),
             "sha3_hash" => {
