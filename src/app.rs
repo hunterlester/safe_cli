@@ -37,7 +37,7 @@ pub fn initialise() -> Option<AppExchangeInfo> {
 
 pub fn authorise(app_info: AppExchangeInfo, auth: &Authenticator) -> Option<Result<AuthGranted, AuthError>> {
    let mut user_container_dec = String::new();
-   println!("Creating permissions for {:?}", app_info.name);
+   println!("{} {:?}", style("Creating permissions for").cyan(), style(&app_info.name).cyan());
    println!("{}", style("Create root container for app? y/n").cyan().bold());
    user_container_dec = read_line(&mut user_container_dec);
 

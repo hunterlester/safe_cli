@@ -1,8 +1,9 @@
 use tiny_keccak::Keccak;
 use helpers::{ read_line };
+use console::style;
 
 pub fn sha3_hash() -> Option<[u8; 32]> {
-  println!("Please enter your secret:");
+  println!("{}", style("Please enter data to be hashed:").yellow().bold());
   let mut data = String::new();
   data = read_line(&mut data);
   let mut sha3 = Keccak::new_sha3_256();

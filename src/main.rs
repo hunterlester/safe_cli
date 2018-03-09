@@ -26,6 +26,11 @@ fn main() {
     let mut app_info: Option<AppExchangeInfo> = None;
     let mut auth_granted: Option<Result<AuthGranted, AuthError>> = None;
     let mut app: Option<Result<App, AppError>>;
+    println!("{}", style("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~").blue().bold());
+    println!("{}", style("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~").blue().bold());
+    println!("{}", style("~~~~~~~~~~~~~~~Welcome to SAFE CLI~~~~~~~~~~~~~~~~~~~").blue().bold());
+    println!("{}", style("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~").blue().bold());
+    println!("{}", style("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~").blue().bold());
     loop {
         println!("{}", style("SAFE CLI (enter command):").yellow().bold());
         let mut command = String::new();
@@ -36,11 +41,11 @@ fn main() {
             "login" => auth = login(),
             "sha3_hash" => {
                 hashed_data = sha3_hash();
-                println!("SHA3 hash: {:?}", hashed_data);
+                println!("{} {:?}", style("SHA3 hash:").green(), style(hashed_data).cyan());
             },
             "initialise" => {
                 app_info = initialise();      
-                println!("{}", style("App info created.").green().bold());
+                println!("{}", style("App info created.").green());
             },
             "authorise" => {
                 match &app_info {
@@ -51,9 +56,9 @@ fn main() {
                                      &Ok(ref authenticator) => {
                                          auth_granted = authorise(info.clone(), authenticator);
                                          println!("{}", style("Auth granted.").green().bold());
-                                         println!("{:?}", auth_granted);
+                                         println!("{:?}", style(&auth_granted).cyan());
                                      },
-                                     &Err(ref err) => println!("Error occurred: {}", err),
+                                     &Err(ref err) => println!("{} {}", style("Error occurred:").red().bold(), style(err).red()),
                                 }
                             },
                             &None => println!("{}", style("Use 'login' command to generate Authenticator").red().bold()),
@@ -72,7 +77,7 @@ fn main() {
                                          app = registered(info.clone(), granted.clone());
                                          println!("{}", style("Registered app session connected.").green().bold());
                                      },
-                                     &Err(ref err) => println!("Error occurred: {}", err),
+                                     &Err(ref err) => println!("{} {}", style("Error occurred:").red().bold(), style(err).red()),
                                 }
                             },
                             &None => println!("{}", style("Use 'login' command to generate Authenticator").red().bold()),

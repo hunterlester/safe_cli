@@ -4,66 +4,83 @@ use console::style;
 use helpers::{ read_line };
 
 fn validate_cred(cred: &'static str) -> String {
-    println!("Please choose a {}:", &cred);
+    println!("{} {}:", style("Please choose a").yellow().bold(), style(&cred).yellow().bold());
     let mut secret = String::new();
     secret = read_line(&mut secret);
     let secret_strength = zxcvbn(&mut secret, &[]).unwrap();
-    println!("\nInteresting information about your {}:\n
-      Estimated number of guesses needed to crack: {:?}\n
-      Estimated number of seconds needed with fastest cracking method: {:?}\n
-      In short, it would take with quickest cracking method: {:?}\n
-      On a scale of 0-4, your score is: {:?}\n", &cred, &secret_strength.guesses, &secret_strength.crack_times_seconds.offline_fast_hashing_1e10_per_second, &secret_strength.crack_times_display.offline_fast_hashing_1e10_per_second, &secret_strength.score);
+    println!("{} {}:\n 
+              {}: {}\n
+              {}: {}\n
+              {}: {}\n
+              {}: {}", 
+        style("Interesting information about your").cyan(), style(&cred).cyan(),  
+        style("Estimated number of guesses needed to crack").cyan(), &secret_strength.guesses,
+        style("Estimated number of seconds needed with fastest cracking method").cyan(), &secret_strength.crack_times_seconds.offline_fast_hashing_1e10_per_second,
+        style("In short, it would take with quickest cracking method").cyan(), &secret_strength.crack_times_display.offline_fast_hashing_1e10_per_second,
+        style("On a scale of 0-4, your score is").cyan(), &secret_strength.score
+    );
 
     if secret_strength.score <= 2 {
-      println!("\nYour {} is not strong enough.\n Here is how to make it stronger: \n{:?}", &cred, &secret_strength.feedback.unwrap());
+      let feedback = &secret_strength.feedback.unwrap();
+      let warning = match &feedback.warning {
+          &Some(ref warn) => warn,
+          &None => "Entered data is too simple to be secure.",
+      };
+      println!("\n{} {} {}\n
+                {}: {}
+                {}: {:?}", 
+          style("Your").red().bold(), style(&cred).red().bold(), style("is not strong enough.").red().bold(),
+          style("Security feeback").red().bold(), style(warning).red().bold(),
+          style("Suggestions").cyan().bold(), style(&feedback.suggestions).cyan().bold()
+      );
       validate_cred(cred)
     } else {
-      println!("Please type in your {} again to confirm:", &cred);
+      println!("{} {} {}:", style("Please type in your").yellow().bold(), style(&cred).yellow().bold(), style("again to confirm").yellow().bold());
       let mut secret_compare = String::new();
       secret_compare = read_line(&mut secret_compare);
       if &mut secret == &mut secret_compare {
         secret
       } else {
-        println!("{} does not match. Starting over...", &cred);
+        println!("{} {}", style(&cred).red().bold(), style("does not match.").red().bold());
         validate_cred(cred)
       }
     }
 }
 
 pub fn create_acc() -> Option<Result<Authenticator, AuthError>> {
-    let secret = validate_cred("secret");
-    println!("\u{2705}Valid secret");
+    let locator = validate_cred("locator");
+    println!("{}", style("Valid secret").green().bold());
     let password = validate_cred("password");
-    println!("\u{2705}Valid password");
-    println!("Please enter your invite code:");
+    println!("{}", style("Valid password").green().bold());
+    println!("{}", style("Please enter your invite code:").yellow().bold());
     let mut invite = String::new();
     invite = read_line(&mut invite);
-    match Authenticator::create_acc(secret, password, invite, || println!("Disconnected from network")) {
+    match Authenticator::create_acc(locator, password, invite, || println!("{}", style("Disconnected from network").red().bold())) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());
           Some(Ok(auth))
       },
       Err(auth_error) => {
-          println!("Failed to create account: {:?}", &auth_error);
+          println!("{}: {}", style("Failed to create account").red().bold(), style(&auth_error).red().bold());
           Some(Err(auth_error))
       },
     }
 }
 
 pub fn login() -> Option<Result<Authenticator, AuthError>> {
-      println!("Please enter your secret:");
-      let mut secret = String::new();
-      secret = read_line(&mut secret);
-      println!("Please enter your password:");
+      println!("{}", style("Please enter your locator:").yellow().bold());
+      let mut locator = String::new();
+      locator = read_line(&mut locator);
+      println!("{}", style("Please enter your password:").yellow().bold());
       let mut password = String::new();
       password = read_line(&mut password);
-      match Authenticator::login(secret, password, || println!("Disconnected from network")) {
+      match Authenticator::login(locator, password, || println!("{}", style("Disconnected from network").red().bold())) {
       Ok(auth) =>  {
           println!("{}", style("Logged in to SAFE network.").green().bold());
           Some(Ok(auth))
       },
       Err(auth_error) => {
-          println!("Login failed: {:?}", &auth_error);
+          println!("{}: {}", style("Login failed").red().bold(), style(&auth_error).red().bold());
           Some(Err(auth_error))
       },
     }
