@@ -8,8 +8,7 @@
 - `git clone` this repository
 - `cd safe_cli`
 - `cargo build`
-- `cargo run`
-- At command prompt: type in `commands` to see list of current commands. The commands are listed in their recommended order, although try them in different order to receive helpful messages from CLI program.
+- `cargo run --bin safe_cli -- help` to see available subcommands
 
 ##### Development dependencies
 - `rustc v1.24.0`

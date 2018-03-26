@@ -1,7 +1,7 @@
-use safe_authenticator::{ Authenticator, AuthError };
 use zxcvbn::zxcvbn;
 use console::style;
 use helpers::{ read_line };
+use std::process::Command;
 
 fn validate_cred(cred: &'static str) -> String {
     println!("{} {}:", style("Please choose a").yellow().bold(), style(&cred).yellow().bold());
@@ -47,41 +47,66 @@ fn validate_cred(cred: &'static str) -> String {
     }
 }
 
-pub fn create_acc() -> Option<Result<Authenticator, AuthError>> {
-    let locator = validate_cred("locator");
-    println!("{}", style("Valid secret").green().bold());
-    let password = validate_cred("password");
-    println!("{}", style("Valid password").green().bold());
-    println!("{}", style("Please enter your invite code:").yellow().bold());
-    let mut invite = String::new();
-    invite = read_line(&mut invite);
-    match Authenticator::create_acc(locator, password, invite, || println!("{}", style("Disconnected from network").red().bold())) {
-      Ok(auth) =>  {
-          println!("{}", style("Logged in to SAFE network.").green().bold());
-          Some(Ok(auth))
-      },
-      Err(auth_error) => {
-          println!("{}: {}", style("Failed to create account").red().bold(), style(&auth_error).red().bold());
-          Some(Err(auth_error))
-      },
+pub fn create_acc(config_file_option: Option<&str>) -> () {
+    let locator: String;
+    let password: String;
+    let mut invite: String; 
+    match config_file_option {
+        Some(config_file) => {
+          println!("Handle Config file passed to create_acc, {:?}", config_file);
+          locator = String::from("guilfordhunterlester");
+          password = String::from("guilfordhunterlester");
+          invite = String::from("guilfordhunterlester");
+        },
+        None => {
+          locator = validate_cred("locator");
+          println!("{}", style("Valid secret").green().bold());
+          password = validate_cred("password");
+          println!("{}", style("Valid password").green().bold());
+          println!("{}", style("Please enter your invite code:").yellow().bold());
+          invite = String::new();
+          invite = read_line(&mut invite);
+        }
     }
+    // TODO: Understand security concerns for passing sensiste\
+    // data to child propcesses
+    let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+                .arg("create_acc")
+                .arg(locator)
+                .arg(password)
+                .arg(invite)
+                .spawn()
+                .expect("Authenticator process failed to start");
+    child.wait().expect("Failed to wait on child");
+    ()
 }
 
-pub fn login() -> Option<Result<Authenticator, AuthError>> {
-      println!("{}", style("Please enter your locator:").yellow().bold());
-      let mut locator = String::new();
-      locator = read_line(&mut locator);
-      println!("{}", style("Please enter your password:").yellow().bold());
-      let mut password = String::new();
-      password = read_line(&mut password);
-      match Authenticator::login(locator, password, || println!("{}", style("Disconnected from network").red().bold())) {
-      Ok(auth) =>  {
-          println!("{}", style("Logged in to SAFE network.").green().bold());
-          Some(Ok(auth))
-      },
-      Err(auth_error) => {
-          println!("{}: {}", style("Login failed").red().bold(), style(&auth_error).red().bold());
-          Some(Err(auth_error))
-      },
+pub fn login(config_file_option: Option<&str>) -> () {
+    let mut locator: String;
+    let mut password: String;
+    match config_file_option {
+        Some(config_file) => {
+          println!("Handle config file passed to login, {:?}", config_file);
+          locator = String::from("guilfordhunterlester");
+          password = String::from("guilfordhunterlester");
+        },
+        None => {
+          println!("{}", style("Please enter your locator:").yellow().bold());
+          locator = String::new();
+          locator = read_line(&mut locator);
+          println!("{}", style("Please enter your password:").yellow().bold());
+          password = String::new();
+          password = read_line(&mut password);
+        }
     }
+    // TODO: Understand security concerns for passing sensiste\
+    // data to child propcesses
+    let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+                .arg("login")
+                .arg(locator)
+                .arg(password)
+                .spawn()
+                .expect("App process failed to start");
+    child.wait().expect("Failed to wait on child");
+    ()
 }
