@@ -7,6 +7,7 @@ extern crate zxcvbn;
 extern crate tiny_keccak;
 extern crate console;
 extern crate clap;
+extern crate tokio;
 
 //use console::style;
 use authenticator::{ create_acc, login };

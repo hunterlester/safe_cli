@@ -2,6 +2,10 @@ use zxcvbn::zxcvbn;
 use console::style;
 use helpers::{ read_line };
 use std::process::Command;
+use tokio::io;
+use tokio::net::TcpListener;
+use tokio::prelude::*;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn validate_cred(cred: &'static str) -> String {
     println!("{} {}:", style("Please choose a").yellow().bold(), style(&cred).yellow().bold());
@@ -68,16 +72,11 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
           invite = read_line(&mut invite);
         }
     }
-    // TODO: Understand security concerns for passing sensiste\
-    // data to child propcesses
     let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
-                .arg("create_acc")
-                .arg(locator)
-                .arg(password)
-                .arg(invite)
-                .spawn()
-                .expect("Authenticator process failed to start");
-    child.wait().expect("Failed to wait on child");
+        .spawn()
+        .expect("Authenticator process failed to start");
+    //let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
+    //TcpListener::bind(&socket_address).unwrap();
     ()
 }
 
@@ -101,12 +100,12 @@ pub fn login(config_file_option: Option<&str>) -> () {
     }
     // TODO: Understand security concerns for passing sensiste\
     // data to child propcesses
-    let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+    let child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
                 .arg("login")
                 .arg(locator)
                 .arg(password)
                 .spawn()
                 .expect("App process failed to start");
-    child.wait().expect("Failed to wait on child");
+    // child.wait().expect("Failed to wait on child");
     ()
 }
