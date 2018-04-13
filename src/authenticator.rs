@@ -1,9 +1,10 @@
 use zxcvbn::zxcvbn;
 use console::style;
 use helpers::{ read_line };
-use std::process::Command;
+use std::process::{ Command, Stdio };
+use tokio;
 use tokio::io;
-use tokio::net::TcpListener;
+use tokio::net::{ TcpListener, TcpStream };
 use tokio::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
@@ -72,11 +73,34 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
           invite = read_line(&mut invite);
         }
     }
-    let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
-        .spawn()
-        .expect("Authenticator process failed to start");
-    //let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
-    //TcpListener::bind(&socket_address).unwrap();
+    let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
+    let tcp_stream_fut = TcpStream::connect(&socket_address);
+    match tcp_stream_fut.wait() {
+      Ok(mut stream) => {
+        println!("stream connected: {}", stream.local_addr().unwrap());
+        //TODO: once connected, send credentials to authenticatord to create account login
+        //let mut buf: Vec<u8> = Vec::new();
+        //let read_connection = io::read_to_end(stream, buf)
+        //  .then(|res| {
+        //     println!("=== {:?}", res);    
+        //  });
+        //tokio::spawn(read_connection);
+      },
+      Err(err) => {
+        println!("Executing TCP listener...");
+        let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+            //.stdin(Stdio::null())
+            //.stdout(Stdio::null())
+            //.stderr(Stdio::null())
+            .arg("create_acc")
+            .arg(locator)
+            .arg(password)
+            .arg(invite)
+            .spawn()
+            .expect("Authenticator process failed to start");
+       child.wait().expect("Failed to wait on child");
+      },
+    };
     ()
 }
 
@@ -99,13 +123,33 @@ pub fn login(config_file_option: Option<&str>) -> () {
         }
     }
     // TODO: Understand security concerns for passing sensiste\
-    // data to child propcesses
-    let child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
-                .arg("login")
-                .arg(locator)
-                .arg(password)
-                .spawn()
-                .expect("App process failed to start");
-    // child.wait().expect("Failed to wait on child");
+    // data to child processes
+    let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
+    let tcp_stream_fut = TcpStream::connect(&socket_address);
+    match tcp_stream_fut.wait() {
+      Ok(mut stream) => {
+        println!("stream connected: {}", stream.local_addr().unwrap());
+        //TODO: once connected, send credentials to authenticatord to login
+        //let mut buf: Vec<u8> = Vec::new();
+        //let read_connection = io::read_to_end(stream, buf)
+        //  .then(|res| {
+        //     println!("=== {:?}", res);    
+        //  });
+        //tokio::spawn(read_connection);
+      },
+      Err(err) => {
+        println!("Executing TCP listener...");
+        let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+            //.stdin(Stdio::null())
+            //.stdout(Stdio::null())
+            //.stderr(Stdio::null())
+            .arg("login")
+            .arg(locator)
+            .arg(password)
+            .spawn()
+            .expect("Authenticator process failed to start");
+       child.wait().expect("Failed to wait on child");
+      },
+    };
     ()
 }
