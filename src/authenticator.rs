@@ -74,21 +74,21 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
         }
     }
     let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
-    let tcp_stream_fut = TcpStream::connect(&socket_address);
-    match tcp_stream_fut.wait() {
-      Ok(mut stream) => {
+    let c_locator: String = locator.clone();
+    let c_password: String = password.clone();
+    let c_invite: String = invite.clone(); 
+    let client = TcpStream::connect(&socket_address).and_then(move |stream| {
         println!("stream connected: {}", stream.local_addr().unwrap());
-        //TODO: once connected, send credentials to authenticatord to create account login
-        //let mut buf: Vec<u8> = Vec::new();
-        //let read_connection = io::read_to_end(stream, buf)
-        //  .then(|res| {
-        //     println!("=== {:?}", res);    
-        //  });
-        //tokio::spawn(read_connection);
-      },
-      Err(err) => {
-        println!("Executing TCP listener...");
-        let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+        io::write_all(stream, format!("IPC create_acc {} {} {}\n", c_locator, c_password, c_invite).into_bytes()).then(|result| {
+            println!("wrote to stream; success={:?}", result.is_ok());
+            Ok(())
+        })
+    })
+    .map_err(|err| {
+        println!("Executing TCP listener...: {:?}: ", err);
+        // TODO: programmatically add executable to system path
+        let mut child = Command::new("C:\\Users\\guilf\\safe\\safe_cli\\target\\debug\\safe_authenticatord.exe")
+            // This is me playing with std IO
             //.stdin(Stdio::null())
             //.stdout(Stdio::null())
             //.stderr(Stdio::null())
@@ -99,8 +99,8 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
             .spawn()
             .expect("Authenticator process failed to start");
        child.wait().expect("Failed to wait on child");
-      },
-    };
+    });
+    tokio::run(client);
     ()
 }
 
@@ -130,15 +130,15 @@ pub fn login(config_file_option: Option<&str>) -> () {
       Ok(mut stream) => {
         println!("stream connected: {}", stream.local_addr().unwrap());
         //TODO: once connected, send credentials to authenticatord to login
-        //let mut buf: Vec<u8> = Vec::new();
-        //let read_connection = io::read_to_end(stream, buf)
-        //  .then(|res| {
-        //     println!("=== {:?}", res);    
-        //  });
-        //tokio::spawn(read_connection);
+        // let mut buf: Vec<u8> = Vec::new();
+        // buf.push(locator);
+        // buf.push(password);
+        // let write_connection = stream.write_buf(buf);
+        // tokio::spawn(write_connection);
       },
       Err(err) => {
         println!("Executing TCP listener...");
+        // TODO: programmatically add executable to system path
         let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\safe_cli\\target\\debug\\safe_authenticatord.exe")
             //.stdin(Stdio::null())
             //.stdout(Stdio::null())
