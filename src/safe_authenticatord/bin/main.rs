@@ -2,7 +2,7 @@ extern crate safe_authenticator;
 extern crate console;
 extern crate tokio;
 
-use std::io::{ BufReader };
+use std::io::BufReader;
 use tokio::io::{ lines, write_all };
 use tokio::net::TcpListener;
 use tokio::prelude::*;
@@ -66,7 +66,7 @@ fn main() {
             let mut auth_instance_mutex = cloned_auth_instance.lock().unwrap();
             *auth_instance_mutex = process_request(request);
             match *auth_instance_mutex {
-                Ok(ref _auth) => String::from("Logged in to SAFE network.").clone(),
+                Ok(ref _auth) => String::from("Logged in to SAFE network via IPC.").clone(),
                 Err(ref auth_err) => format!("{}", &auth_err).clone(),
             }
         });
