@@ -86,13 +86,10 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
         let socket = BufReader::new(stream);
         io::lines(socket).for_each(|line| {
             println!("Authenticator response: {}", line);
+            // TODO: Needs to shutdown stream and end process once response has been received
             Ok(()) 
         }).then(|_| Ok(()))
     })
-    // .and_then(|(stream)| {
-    //     stream.shutdown(Shutdown::Both).expect("Socket failed to shutdown");
-    //     Ok(())
-    // })
     .map_err(|err| {
         println!("Executing TCP listener...: {:?}: ", err);
         // TODO: programmatically add executable to system path
@@ -114,8 +111,8 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
 }
 
 pub fn login(config_file_option: Option<&str>) -> () {
-    let mut locator: String;
-    let mut password: String;
+    let locator: String;
+    let password: String;
     match config_file_option {
         Some(config_file) => {
           println!("Handle config file passed to login, {:?}", config_file);
@@ -123,42 +120,42 @@ pub fn login(config_file_option: Option<&str>) -> () {
           password = String::from("guilfordhunterlester");
         },
         None => {
-          println!("{}", style("Please enter your locator:").yellow().bold());
-          locator = String::new();
-          locator = read_line(&mut locator);
-          println!("{}", style("Please enter your password:").yellow().bold());
-          password = String::new();
-          password = read_line(&mut password);
+          locator = validate_cred("locator");
+          println!("{}", style("Valid secret").green().bold());
+          password = validate_cred("password");
+          println!("{}", style("Valid password").green().bold());
         }
     }
-    // TODO: Understand security concerns for passing sensiste\
-    // data to child processes
     let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
-    let tcp_stream_fut = TcpStream::connect(&socket_address);
-    match tcp_stream_fut.wait() {
-      Ok(stream) => {
+    let c_locator: String = locator.clone();
+    let c_password: String = password.clone();
+    let client = TcpStream::connect(&socket_address).and_then(move |stream| {
         println!("stream connected: {}", stream.local_addr().unwrap());
-        //TODO: once connected, send credentials to authenticatord to login
-        // let mut buf: Vec<u8> = Vec::new();
-        // buf.push(locator);
-        // buf.push(password);
-        // let write_connection = stream.write_buf(buf);
-        // tokio::spawn(write_connection);
-      },
-      Err(_err) => {
-        println!("Executing TCP listener...");
+        io::write_all(stream, format!("IPC login {} {}\n", c_locator, c_password).into_bytes())
+    })
+    .and_then(|(stream, _)| {
+        let socket = BufReader::new(stream);
+        io::lines(socket).for_each(|line| {
+            println!("Authenticator response: {}", line);
+            // TODO: Needs to shutdown stream and end process once response has been received
+            Ok(()) 
+        }).then(|_| Ok(()))
+    })
+    .map_err(|err| {
+        println!("Executing TCP listener...: {:?}: ", err);
         // TODO: programmatically add executable to system path
-        let mut child = Command::new("C:\\Users\\guilf\\safe\\dev\\cli\\target\\debug\\safe_authenticatord.exe")
+        let mut child = Command::new("C:\\Users\\guilf\\safe\\cli\\target\\debug\\safe_authenticatord.exe")
+            // This is me playing with std IO
             //.stdin(Stdio::null())
             //.stdout(Stdio::null())
             //.stderr(Stdio::null())
-            .arg("login")
+            .arg("create_acc")
             .arg(locator)
             .arg(password)
             .spawn()
             .expect("Authenticator process failed to start");
        child.wait().expect("Failed to wait on child");
-      },
-    };
+    });
+    tokio::run(client);
     ()
 }

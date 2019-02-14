@@ -21,7 +21,7 @@ fn process_request(args: Vec<String>) -> Result<Authenticator, AuthError> {
         let invite = args[4].clone();
         match Authenticator::create_acc(locator, password, invite, || println!("{}", style("Disconnected from network").red().bold())) {
           Ok(auth) =>  {
-              println!("{}", style("Logged in to SAFE network.").green().bold());
+              println!("{}", style("Account created and logged in to SAFE network.").green().bold());
               Ok(auth)
           },
           Err(auth_error) => {
