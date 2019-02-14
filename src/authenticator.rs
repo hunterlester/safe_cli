@@ -8,6 +8,7 @@ use tokio::net::TcpStream;
 use tokio::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, Shutdown};
 use std::io::BufReader;
+use std::env::current_dir;
 
 fn validate_cred(cred: &'static str) -> String {
     println!("{} {}:", style("Please choose a").yellow().bold(), style(&cred).yellow().bold());
@@ -91,9 +92,16 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
         }).then(|_| Ok(()))
     })
     .map_err(|err| {
-        println!("Executing TCP listener...: {:?}: ", err);
-        // TODO: programmatically add executable to system path
-        let mut child = Command::new("C:\\Users\\guilf\\safe\\cli\\target\\debug\\safe_authenticatord.exe")
+        println!("{:?}: No running instance, executing authenticatord...", err);
+        let mut path = current_dir().unwrap();
+        path.push("target");
+        path.push("debug");
+        if cfg!(windows) {
+            path.push("safe_authenticatord.exe");
+        } else {
+            path.push("safe_authenticatord");
+        }
+        let mut child = Command::new(path.to_str().unwrap())
             // This is me playing with std IO
             //.stdin(Stdio::null())
             //.stdout(Stdio::null())
@@ -142,9 +150,16 @@ pub fn login(config_file_option: Option<&str>) -> () {
         }).then(|_| Ok(()))
     })
     .map_err(|err| {
-        println!("Executing TCP listener...: {:?}: ", err);
-        // TODO: programmatically add executable to system path
-        let mut child = Command::new("C:\\Users\\guilf\\safe\\cli\\target\\debug\\safe_authenticatord.exe")
+        println!("{:?}: No running instance, executing authenticatord...", err);
+        let mut path = current_dir().unwrap();
+        path.push("target");
+        path.push("debug");
+        if cfg!(windows) {
+            path.push("safe_authenticatord.exe");
+        } else {
+            path.push("safe_authenticatord");
+        }
+        let mut child = Command::new(path.to_str().unwrap())
             // This is me playing with std IO
             //.stdin(Stdio::null())
             //.stdout(Stdio::null())
