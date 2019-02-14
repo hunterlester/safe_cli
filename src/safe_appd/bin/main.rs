@@ -8,9 +8,9 @@
 use std::env;
 
 fn main() {
-    println!("app bin");    
+    println!("app bin");
 
     for argument in env::args() {
-        println!("{}", argument);    
+        println!("{}", argument);
     }
 }
