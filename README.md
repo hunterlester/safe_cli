@@ -11,8 +11,7 @@
 - `cargo run --bin safe_cli -- help` to see available subcommands
 
 ##### Development dependencies
-- `rustc v1.24.0`
-- `cargo 0.25.0`
+- `rustc v1.32.0`
 
 ##### Goals
 - Become more familiar with [safe_client_libs](https://github.com/maidsafe/safe_client_libs)
