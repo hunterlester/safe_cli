@@ -7,6 +7,9 @@
 //use console::style;
 //use helpers::{ read_line };
 //
+//
+// TODO: Use maidsafe_utilities to serialise and deserialise AuthReq, etc, (which uses bincode)
+//
 //pub fn initialise() -> Option<AppExchangeInfo> {
 //    let mut id = String::new();
 //    let mut name = String::new();
