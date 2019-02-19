@@ -3,10 +3,10 @@ mod authenticator;
 //mod app;
 mod helpers;
 
+extern crate actix_web;
 extern crate clap;
 extern crate console;
 extern crate tiny_keccak;
-extern crate tokio;
 extern crate zxcvbn;
 
 //use console::style;
@@ -30,13 +30,13 @@ fn main() {
           .arg(Arg::with_name("config_file")
                .takes_value(true)
                .min_values(0)
-               .help("Login to network with name and password")))
+               .help("Login to network with locator and password")))
       .subcommand(
         SubCommand::with_name("create_acc") 
           .arg(Arg::with_name("config_file")
                .takes_value(true)
                .min_values(0)
-               .help("Create new account with SAFE network with name, password, and invitation key")))
+               .help("Create new account with SAFE network with locator, password, and invitation key")))
       .subcommand(
         SubCommand::with_name("sha3_hash") 
           .arg(Arg::with_name("sha3_hash")
@@ -60,63 +60,4 @@ fn main() {
         ("", None) => (),
         _ => (),
     }
-
-    //    match matches.value_of("sha3_hash") {
-    //      Some(data) => sha3_hash(),
-    //      None => (),
-    //    }
-
-    //   let mut auth: Option<Result<Authenticator, AuthError>> = None;
-    //   let mut hashed_data: Option<[u8; 32]> = None;
-    //   let mut app_info: Option<AppExchangeInfo> = None;
-    //   let mut auth_granted: Option<Result<AuthGranted, AuthError>> = None;
-    //   let mut app: Option<Result<App, AppError>>;
-    //    loop {
-    //        match command.as_str() {
-    //            "initialise" => {
-    //                app_info = initialise();
-    //                println!("{}", style("App info created.").green());
-    //            },
-    //            "authorise" => {
-    //                match &app_info {
-    //                    &Some(ref info) => {
-    //                        match &auth {
-    //                            &Some(ref auth_result) => {
-    //                                match auth_result {
-    //                                     &Ok(ref authenticator) => {
-    //                                         auth_granted = authorise(info.clone(), authenticator);
-    //                                         println!("{}", style("Auth granted.").green().bold());
-    //                                         println!("{:?}", style(&auth_granted).cyan());
-    //                                     },
-    //                                     &Err(ref err) => println!("{} {}", style("Error occurred:").red().bold(), style(err).red()),
-    //                                }
-    //                            },
-    //                            &None => println!("{}", style("Use 'login' command to generate Authenticator").red().bold()),
-    //                        }
-    //                    },
-    //                    &None => println!("{}", style("First use 'initialise' command to generate AppExchangeInfo").red().bold()),
-    //                };
-    //            },
-    //            "registered" => {
-    //                 match &app_info {
-    //                     &Some(ref info) => {
-    //                        match &auth_granted {
-    //                            &Some(ref auth_granted_result) => {
-    //                                match auth_granted_result {
-    //                                     &Ok(ref granted) => {
-    //                                         app = registered(info.clone(), granted.clone());
-    //                                         println!("{}", style("Registered app session connected.").green().bold());
-    //                                     },
-    //                                     &Err(ref err) => println!("{} {}", style("Error occurred:").red().bold(), style(err).red()),
-    //                                }
-    //                            },
-    //                            &None => println!("{}", style("Use 'login' command to generate Authenticator").red().bold()),
-    //                        }
-    //                     },
-    //                     &None => println!("{}", style("First use 'initialise' command to generate AppExchangeInfo").red().bold()),
-    //                 }
-    //            },
-    //            _ => println!("{}", style("Command not yet implemented or recognised").red().bold()),
-    //        }
-    //    }
 }

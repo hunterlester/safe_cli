@@ -1,113 +1,71 @@
+extern crate actix_web;
 extern crate console;
-extern crate safe_authenticator;
-extern crate tokio;
+// extern crate safe_authenticator;
 
+use actix_web::{http::Method, server, App, HttpRequest, Path};
 use console::style;
-use safe_authenticator::{AuthError, Authenticator};
-use std::env;
-use std::io::BufReader;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+// use safe_authenticator::{AuthError, Authenticator};
 use std::sync::{Arc, Mutex};
-use tokio::io::{lines, write_all};
-use tokio::net::TcpListener;
-use tokio::prelude::*;
 
-fn process_request(args: Vec<String>) -> Result<Authenticator, AuthError> {
-    let request_type = args[1].clone();
-    match request_type.as_ref() {
-        "create_acc" => {
-            let locator = args[2].clone();
-            let password = args[3].clone();
-            let invite = args[4].clone();
-            match Authenticator::create_acc(locator, password, invite, || {
-                println!("{}", style("Disconnected from network").red().bold())
-            }) {
-                Ok(auth) => {
-                    println!(
-                        "{}",
-                        style("Account created and logged in to SAFE network.")
-                            .green()
-                            .bold()
-                    );
-                    Ok(auth)
-                }
-                Err(auth_error) => {
-                    println!(
-                        "{}: {}",
-                        style("Failed to create account").red().bold(),
-                        style(&auth_error).red().bold()
-                    );
-                    Err(auth_error)
-                }
-            }
-        }
-        "login" => {
-            let locator = args[2].clone();
-            let password = args[3].clone();
-            match Authenticator::login(locator, password, || {
-                println!("{}", style("Disconnected from network").red().bold())
-            }) {
-                Ok(auth) => {
-                    println!("{}", style("Logged in to SAFE network.").green().bold());
-                    Ok(auth)
-                }
-                Err(auth_error) => {
-                    println!(
-                        "{}: {}",
-                        style("Login failed").red().bold(),
-                        style(&auth_error).red().bold()
-                    );
-                    Err(auth_error)
-                }
-            }
-        }
-        _ => {
-            println!("Unrecognised operation: {}", request_type);
-            Err(AuthError::from(format!(
-                "Unrecognised operation: {}",
-                request_type
-            )))
-        }
-    }
+fn create_acc(info: Path<(String, String, String)>, req: HttpRequest) -> &'static str {
+    println!("req object: {:?}", &req);
+    // let mut handle = *(req.state().handle.lock().unwrap());
+    // match Authenticator::create_acc(info.0, info.1, info.2, || {
+    //     println!("{}", style("Disconnected from network").red().bold())
+    // }) {
+    //     Ok(auth) => {
+    //         handle = Some(Ok(auth));
+    //         "Account created and logged in to SAFE network."
+    //     }
+    //     Err(auth_error) => {
+    //         handle = Some(Err(auth_error));
+    //         format!("Failed to create account: {}", &auth_error).as_str()
+    //     }
+    // }
+            "Account created and logged in to SAFE network."
 }
 
+fn login(info: Path<(String, String)>, req: HttpRequest) -> &'static str {
+    println!("Login info: {:?}", info);
+    println!("req object: {:?}", &req);
+    // let mut handle = *(req.state().handle.lock().unwrap());
+    // match Authenticator::login(info.0, info.1, || {
+    //     println!("{}", style("Disconnected from network").red().bold())
+    // }) {
+    //     Ok(auth) => {
+    //         handle = Some(Ok(auth));
+    //         "Logged in to SAFE network."
+    //     }
+    //     Err(auth_error) => {
+    //         handle = Some(Err(auth_error));
+    //         format!("Login failed: {}", &auth_error).as_str()
+    //     }
+    // }
+            "Logged in to SAFE network."
+}
+
+fn index(req: HttpRequest) -> &'static str {
+    println!("req object: {:?}", &req);
+    "Hello, world!"
+}
+
+// struct Authenticator {
+//     handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>
+// }
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let auth_instance: Arc<Mutex<Result<Authenticator, AuthError>>> =
-        Arc::new(Mutex::new(process_request(args)));
-    let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 41805);
-    let listener = TcpListener::bind(&socket_address).unwrap();
+    // let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> =
+        // Arc::new(Mutex::new(None));
 
-    let server = listener
-        .incoming()
-        .for_each(move |socket| {
-            let (reader, writer) = socket.split();
-            let lines = lines(BufReader::new(reader));
-            let cloned_auth_instance = auth_instance.clone();
-            let responses = lines.map(move |line| {
-                let request: Vec<String> = line.split_whitespace().map(|v| v.to_string()).collect();
-                let mut auth_instance_mutex = cloned_auth_instance.lock().unwrap();
-                *auth_instance_mutex = process_request(request);
-                match *auth_instance_mutex {
-                    Ok(ref _auth) => String::from("Logged in to SAFE network via IPC.").clone(),
-                    Err(ref auth_err) => format!("{}", &auth_err).clone(),
-                }
-            });
-
-            let writes = responses.fold(writer, |writer, mut response| {
-                response.push('\n');
-                write_all(writer, response.into_bytes()).map(|(w, _)| w)
-            });
-
-            let msg = writes.then(move |_| Ok(()));
-
-            tokio::spawn(msg);
-            Ok(())
-        })
-        .map_err(|err| {
-            println!("accept error = {:?}", err);
-        });
-
-    println!("server running on localhost:41805");
-    tokio::run(server);
+    server::new(
+        // || App::with_state(Authenticator{handle: handle.clone()})
+        || App::new() 
+           .route("/", Method::GET, index)
+           .route("/login/{locator}/{password}", Method::POST, login)
+           .route("/create_acc/{locator}/{password}/{invite}", Method::POST, create_acc)
+           .finish()
+        )
+        .bind("127.0.0.1:41805")
+        .unwrap()
+        .run();
 }
