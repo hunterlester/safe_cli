@@ -2,17 +2,19 @@
 name = "safe_cli"
 version = "0.1.0"
 authors = ["hunterlester <guilfordhunter@gmail.com>"]
-edition = "2018"
 
 [dependencies]
 zxcvbn = "1.0.0"
-tiny-keccak = "1.3"
 console = "0.6.1"
 clap = "2.25.1"
 actix-web = "0.7.18"
 futures = "0.1"
-safe_authenticator = "0.9.0"
+safe_authenticator = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_authenticator", branch = "safe_authenticator-0.9.0-upgrades" } 
 
+[features]
+testing = ["safe_authenticator/testing"]
+use-mock-routing = ["safe_authenticator/use-mock-routing"]
+default = ["use-mock-routing"]
 
 [[bin]]
 name = "safe_appd"

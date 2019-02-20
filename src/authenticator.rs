@@ -1,8 +1,9 @@
-use actix_web::{actix, client};
+use actix_web::{actix, client, HttpMessage};
 use console::style;
 use crate::helpers::read_line;
 use std::env::current_dir;
 use std::process::Command;
+use std::{thread, time};
 use zxcvbn::zxcvbn;
 use futures::Future;
 
@@ -78,7 +79,7 @@ fn validate_cred(cred: &'static str) -> String {
     }
 }
 
-pub fn create_acc(config_file_option: Option<&str>) -> () {
+pub fn create_acc(config_file_option: Option<&str>) {
     let locator: String;
     let password: String;
     let mut invite: String;
@@ -109,10 +110,6 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
         move || client::post(format!("http://localhost:41805/create_acc/{}/{}/{}", &c_locator, &c_password, &c_invite))
            .finish().unwrap()
            .send()
-           .and_then(|response| {
-               println!("Authenticator response: {:?}", response);
-               Ok(())
-           })
            .map_err(|err| {
                println!(
                    "{:?}: No running instance, executing authenticatord...",
@@ -130,22 +127,37 @@ pub fn create_acc(config_file_option: Option<&str>) -> () {
                    .spawn()
                    .expect("Authenticator process failed to start");
                child.wait().expect("Failed to wait on child");
+               let three_secs = time::Duration::from_secs(3);
+               thread::sleep(three_secs);
                actix::run(
                    move || client::post(format!("http://localhost:41805/create_acc/{}/{}/{}", &c_locator, &c_password, &c_invite))
                       .finish().unwrap()
                       .send()
                       .map_err(|_| ())
                       .and_then(|response| {
-                          println!("Authenticator response: {:?}", response);
-                          Ok(())
+                          response.body().map(move |body| {
+                              (response, body)    
+                          }).map_err(|e| println!("Error: {:?}", e))
+                          .and_then(|(response, body)| {
+                              println!("Response: {:?}, Body: {:?}", response, body);
+                              Ok(())
+                          }).map(|_| actix::System::current().stop())
                       })
-               );
+               )
+           })
+           .and_then(|response| {
+               response.body().map(move |body| {
+                   (response, body)    
+               }).map_err(|e| println!("Error: {:?}", e))
+               .and_then(|(response, body)| {
+                   println!("Response: {:?}, Body: {:?}", response, body);
+                   Ok(())
+               }).map(|_| actix::System::current().stop())
            })
     );
-    ()
 }
 
-pub fn login(config_file_option: Option<&str>) -> () {
+pub fn login(config_file_option: Option<&str>) {
     let locator: String;
     let password: String;
     match config_file_option {
@@ -167,10 +179,6 @@ pub fn login(config_file_option: Option<&str>) -> () {
         move || client::post(format!("http://localhost:41805/login/{}/{}", &c_locator, &c_password))
            .finish().unwrap()
            .send()
-           .and_then(|response| {
-               println!("Authenticator response: {:?}", response);
-               Ok(())
-           })
            .map_err(|err| {
                println!(
                    "{:?}: No running instance, executing authenticatord...",
@@ -188,17 +196,32 @@ pub fn login(config_file_option: Option<&str>) -> () {
                    .spawn()
                    .expect("Authenticator process failed to start");
                child.wait().expect("Failed to wait on child");
+               let three_secs = time::Duration::from_secs(3);
+               thread::sleep(three_secs);
                actix::run(
                    move || client::post(format!("http://localhost:41805/login/{}/{}", &c_locator, &c_password))
                       .finish().unwrap()
                       .send()
                       .map_err(|_| ())
                       .and_then(|response| {
-                          println!("Authenticator response: {:?}", response);
-                          Ok(())
+                          response.body().map(move |body| {
+                              (response, body)    
+                          }).map_err(|e| println!("Error: {:?}", e))
+                          .and_then(|(response, body)| {
+                              println!("Response: {:?}, Body: {:?}", response, body);
+                              Ok(())
+                          }).map(|_| actix::System::current().stop())
                       })
                );
            })
+           .and_then(|response| {
+               response.body().map(move |body| {
+                   (response, body)    
+               }).map_err(|e| println!("Error: {:?}", e))
+               .and_then(|(response, body)| {
+                   println!("Response: {:?}, Body: {:?}", response, body);
+                   Ok(())
+               }).map(|_| actix::System::current().stop())
+           })
     );
-    ()
 }
