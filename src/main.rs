@@ -4,8 +4,8 @@ mod helpers;
 extern crate actix_web;
 extern crate clap;
 extern crate console;
-extern crate zxcvbn;
 extern crate futures;
+extern crate zxcvbn;
 
 use authenticator::{create_acc, login};
 use clap::{App, Arg, SubCommand};

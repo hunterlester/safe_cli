@@ -1,11 +1,11 @@
+use crate::helpers::read_line;
 use actix_web::{actix, client, HttpMessage};
 use console::style;
-use crate::helpers::read_line;
+use futures::Future;
 use std::env::current_dir;
 use std::process::Command;
 use std::{thread, time};
 use zxcvbn::zxcvbn;
-use futures::Future;
 
 fn validate_cred(cred: &'static str) -> String {
     println!(
@@ -106,55 +106,67 @@ pub fn create_acc(config_file_option: Option<&str>) {
     let c_locator: String = locator.clone();
     let c_password: String = password.clone();
     let c_invite: String = invite.clone();
-    actix::run(
-        move || client::post(format!("http://localhost:41805/create_acc/{}/{}/{}", &c_locator, &c_password, &c_invite))
-           .finish().unwrap()
-           .send()
-           .map_err(|err| {
-               println!(
-                   "{:?}: No running instance, executing authenticatord...",
-                   err
-               );
-               let mut path = current_dir().unwrap();
-               path.push("target");
-               path.push("debug");
-               if cfg!(windows) {
-                   path.push("safe_authenticatord.exe");
-               } else {
-                   path.push("safe_authenticatord");
-               }
-               let mut child = Command::new(path.to_str().unwrap())
-                   .spawn()
-                   .expect("Authenticator process failed to start");
-               child.wait().expect("Failed to wait on child");
-               let three_secs = time::Duration::from_secs(3);
-               thread::sleep(three_secs);
-               actix::run(
-                   move || client::post(format!("http://localhost:41805/create_acc/{}/{}/{}", &c_locator, &c_password, &c_invite))
-                      .finish().unwrap()
-                      .send()
-                      .map_err(|_| ())
-                      .and_then(|response| {
-                          response.body().map(move |body| {
-                              (response, body)    
-                          }).map_err(|e| println!("Error: {:?}", e))
-                          .and_then(|(response, body)| {
-                              println!("Response: {:?}, Body: {:?}", response, body);
-                              Ok(())
-                          }).map(|_| actix::System::current().stop())
-                      })
-               )
-           })
-           .and_then(|response| {
-               response.body().map(move |body| {
-                   (response, body)    
-               }).map_err(|e| println!("Error: {:?}", e))
-               .and_then(|(response, body)| {
-                   println!("Response: {:?}, Body: {:?}", response, body);
-                   Ok(())
-               }).map(|_| actix::System::current().stop())
-           })
-    );
+    actix::run(move || {
+        client::post(format!(
+            "http://localhost:41805/create_acc/{}/{}/{}",
+            &c_locator, &c_password, &c_invite
+        ))
+        .finish()
+        .unwrap()
+        .send()
+        .map_err(|err| {
+            println!(
+                "{:?}: No running instance, executing authenticatord...",
+                err
+            );
+            let mut path = current_dir().unwrap();
+            path.push("target");
+            path.push("debug");
+            if cfg!(windows) {
+                path.push("safe_authenticatord.exe");
+            } else {
+                path.push("safe_authenticatord");
+            }
+            let mut child = Command::new(path.to_str().unwrap())
+                .spawn()
+                .expect("Authenticator process failed to start");
+            child.wait().expect("Failed to wait on child");
+            let three_secs = time::Duration::from_secs(3);
+            thread::sleep(three_secs);
+            actix::run(move || {
+                client::post(format!(
+                    "http://localhost:41805/create_acc/{}/{}/{}",
+                    &c_locator, &c_password, &c_invite
+                ))
+                .finish()
+                .unwrap()
+                .send()
+                .map_err(|_| ())
+                .and_then(|response| {
+                    response
+                        .body()
+                        .map(move |body| (response, body))
+                        .map_err(|e| println!("Error: {:?}", e))
+                        .and_then(|(response, body)| {
+                            println!("Response: {:?}, Body: {:?}", response, body);
+                            Ok(())
+                        })
+                        .map(|_| actix::System::current().stop())
+                })
+            })
+        })
+        .and_then(|response| {
+            response
+                .body()
+                .map(move |body| (response, body))
+                .map_err(|e| println!("Error: {:?}", e))
+                .and_then(|(response, body)| {
+                    println!("Response: {:?}, Body: {:?}", response, body);
+                    Ok(())
+                })
+                .map(|_| actix::System::current().stop())
+        })
+    });
 }
 
 pub fn login(config_file_option: Option<&str>) {
@@ -175,53 +187,65 @@ pub fn login(config_file_option: Option<&str>) {
     }
     let c_locator: String = locator.clone();
     let c_password: String = password.clone();
-    actix::run(
-        move || client::post(format!("http://localhost:41805/login/{}/{}", &c_locator, &c_password))
-           .finish().unwrap()
-           .send()
-           .map_err(|err| {
-               println!(
-                   "{:?}: No running instance, executing authenticatord...",
-                   err
-               );
-               let mut path = current_dir().unwrap();
-               path.push("target");
-               path.push("debug");
-               if cfg!(windows) {
-                   path.push("safe_authenticatord.exe");
-               } else {
-                   path.push("safe_authenticatord");
-               }
-               let mut child = Command::new(path.to_str().unwrap())
-                   .spawn()
-                   .expect("Authenticator process failed to start");
-               child.wait().expect("Failed to wait on child");
-               let three_secs = time::Duration::from_secs(3);
-               thread::sleep(three_secs);
-               actix::run(
-                   move || client::post(format!("http://localhost:41805/login/{}/{}", &c_locator, &c_password))
-                      .finish().unwrap()
-                      .send()
-                      .map_err(|_| ())
-                      .and_then(|response| {
-                          response.body().map(move |body| {
-                              (response, body)    
-                          }).map_err(|e| println!("Error: {:?}", e))
-                          .and_then(|(response, body)| {
-                              println!("Response: {:?}, Body: {:?}", response, body);
-                              Ok(())
-                          }).map(|_| actix::System::current().stop())
-                      })
-               );
-           })
-           .and_then(|response| {
-               response.body().map(move |body| {
-                   (response, body)    
-               }).map_err(|e| println!("Error: {:?}", e))
-               .and_then(|(response, body)| {
-                   println!("Response: {:?}, Body: {:?}", response, body);
-                   Ok(())
-               }).map(|_| actix::System::current().stop())
-           })
-    );
+    actix::run(move || {
+        client::post(format!(
+            "http://localhost:41805/login/{}/{}",
+            &c_locator, &c_password
+        ))
+        .finish()
+        .unwrap()
+        .send()
+        .map_err(|err| {
+            println!(
+                "{:?}: No running instance, executing authenticatord...",
+                err
+            );
+            let mut path = current_dir().unwrap();
+            path.push("target");
+            path.push("debug");
+            if cfg!(windows) {
+                path.push("safe_authenticatord.exe");
+            } else {
+                path.push("safe_authenticatord");
+            }
+            let mut child = Command::new(path.to_str().unwrap())
+                .spawn()
+                .expect("Authenticator process failed to start");
+            child.wait().expect("Failed to wait on child");
+            let three_secs = time::Duration::from_secs(3);
+            thread::sleep(three_secs);
+            actix::run(move || {
+                client::post(format!(
+                    "http://localhost:41805/login/{}/{}",
+                    &c_locator, &c_password
+                ))
+                .finish()
+                .unwrap()
+                .send()
+                .map_err(|_| ())
+                .and_then(|response| {
+                    response
+                        .body()
+                        .map(move |body| (response, body))
+                        .map_err(|e| println!("Error: {:?}", e))
+                        .and_then(|(response, body)| {
+                            println!("Response: {:?}, Body: {:?}", response, body);
+                            Ok(())
+                        })
+                        .map(|_| actix::System::current().stop())
+                })
+            });
+        })
+        .and_then(|response| {
+            response
+                .body()
+                .map(move |body| (response, body))
+                .map_err(|e| println!("Error: {:?}", e))
+                .and_then(|(response, body)| {
+                    println!("Response: {:?}, Body: {:?}", response, body);
+                    Ok(())
+                })
+                .map(|_| actix::System::current().stop())
+        })
+    });
 }

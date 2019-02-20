@@ -2,16 +2,19 @@ extern crate actix_web;
 extern crate console;
 extern crate safe_authenticator;
 
-use actix_web::{http::Method, server, App, HttpRequest, Path, HttpResponse};
+use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path};
 use console::style;
 use safe_authenticator::{AuthError, Authenticator};
 use std::sync::{Arc, Mutex};
 
 struct AuthenticatorStruct {
-    handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>
+    handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>,
 }
 
-fn create_acc(info: Path<(String, String, String)>, req: HttpRequest<AuthenticatorStruct>) -> HttpResponse {
+fn create_acc(
+    info: Path<(String, String, String)>,
+    req: HttpRequest<AuthenticatorStruct>,
+) -> HttpResponse {
     match Authenticator::create_acc(info.0.clone(), info.1.clone(), info.2.clone(), || {
         println!("{}", style("Disconnected from network").red().bold())
     }) {
@@ -49,17 +52,24 @@ fn index(_req: HttpRequest<AuthenticatorStruct>) -> &'static str {
 }
 
 fn main() {
-    let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> =
-        Arc::new(Mutex::new(None));
+    let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> = Arc::new(Mutex::new(None));
 
-    server::new(
-        move || App::with_state(AuthenticatorStruct{handle: handle.clone()})
-           .resource("/", |r| { r.method(Method::GET).with(index); })
-           .resource("/login/{locator}/{password}", |r| { r.method(Method::POST).with(login); })
-           .resource("/create_acc/{locator}/{password}/{invite}", |r| { r.method(Method::POST).with(create_acc); })
-           .finish()
-        )
-        .bind("127.0.0.1:41805")
-        .unwrap()
-        .run();
+    server::new(move || {
+        App::with_state(AuthenticatorStruct {
+            handle: handle.clone(),
+        })
+        .resource("/", |r| {
+            r.method(Method::GET).with(index);
+        })
+        .resource("/login/{locator}/{password}", |r| {
+            r.method(Method::POST).with(login);
+        })
+        .resource("/create_acc/{locator}/{password}/{invite}", |r| {
+            r.method(Method::POST).with(create_acc);
+        })
+        .finish()
+    })
+    .bind("127.0.0.1:41805")
+    .unwrap()
+    .run();
 }
