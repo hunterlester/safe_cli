@@ -2,13 +2,13 @@
 
 #### Notes:
 - This program compiles for `mock-routing` by default. Do not attempt to use it with the live network until protection of secret credentials is implemented.
-- This initial implementation will soon be deprecrated and replaced by a more flexible design. See [DESIGN](https://github.com/hunterlester/safe_cli/blob/master/DESIGN.md) doc 
 
 ##### Getting started 
 - `git clone` this repository
 - `cd safe_cli`
 - `cargo build`
-- `cargo run --bin safe_cli -- help` to see available subcommands
+- `cargo run --bin safe_authenticatord` in one terminal
+- In a separate terminal: `cargo run --bin safe_cli -- login`
 
 ##### Development dependencies
 - `rustc v1.32.0`
@@ -20,3 +20,6 @@
 - Implement Clippy to improve code and introduce perspective for how to think differently about coding in Rust
 - Receive feedback from SAFE network community about desired features
 - Research how specific components may have already been developed, for example Chromium's IPC management
+
+
+See [DESIGN](https://github.com/hunterlester/safe_cli/blob/master/DESIGN.md) doc
