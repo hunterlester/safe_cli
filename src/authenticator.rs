@@ -15,7 +15,7 @@ fn validate_cred(cred: &'static str) -> String {
     );
     let mut secret = String::new();
     secret = read_line(&mut secret);
-    let secret_strength = zxcvbn(&mut secret, &[]).unwrap();
+    let secret_strength = zxcvbn(&secret, &[]).unwrap();
     println!(
         "{} {}:\n 
               {}: {}\n
@@ -39,10 +39,10 @@ fn validate_cred(cred: &'static str) -> String {
     );
 
     if secret_strength.score <= 2 {
-        let feedback = &secret_strength.feedback.unwrap();
-        let warning = match &feedback.warning {
-            &Some(ref warn) => warn,
-            &None => "Entered data is too simple to be secure.",
+        let feedback = secret_strength.feedback.unwrap();
+        let warning = match feedback.warning {
+            Some(ref warn) => warn,
+            None => "Entered data is too simple to be secure.",
         };
         println!(
             "\n{} {} {}\n
@@ -66,7 +66,7 @@ fn validate_cred(cred: &'static str) -> String {
         );
         let mut secret_compare = String::new();
         secret_compare = read_line(&mut secret_compare);
-        if &mut secret == &mut secret_compare {
+        if secret == secret_compare {
             secret
         } else {
             println!(
