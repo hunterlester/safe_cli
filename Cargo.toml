@@ -4,12 +4,14 @@ version = "0.1.0"
 authors = ["hunterlester <guilfordhunter@gmail.com>"]
 
 [dependencies]
-zxcvbn = "1.0.0"
-console = "0.6.1"
-clap = "2.25.1"
 actix-web = "0.7.18"
+clap = "2.25.1"
+console = "0.6.1"
 futures = "0.1"
 safe_authenticator = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_authenticator", branch = "safe_authenticator-0.9.0-upgrades" } 
+safe_core = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_core", branch = "safe_authenticator-0.9.0-upgrades" } 
+serde_json = "1.0"
+zxcvbn = "1.0.0"
 
 [features]
 testing = ["safe_authenticator/testing"]
