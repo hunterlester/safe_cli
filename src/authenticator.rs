@@ -6,6 +6,9 @@ use std::env::current_dir;
 use std::process::Command;
 use std::{thread, time};
 use zxcvbn::zxcvbn;
+use safe_core::ipc::req::{AppExchangeInfo, Permission, AuthReq, IpcReq};
+use safe_core::ipc::{IpcMsg, encode_msg, gen_req_id};
+use std::collections::{ BTreeSet, HashMap };
 
 fn validate_cred(cred: &'static str) -> String {
     println!(
@@ -247,5 +250,107 @@ pub fn login(config_file_option: Option<&str>) {
                 })
                 .map(|_| actix::System::current().stop())
         })
+    });
+}
+
+
+pub fn authorise(config_file_option: Option<&str>) {
+    let mut id = String::new();
+    let mut name = String::new();
+    let mut vendor = String::new();
+    let mut scope = String::new();
+    let mut containers = HashMap::new();
+    let mut own_container: bool;
+    match config_file_option {
+        Some(config_file) => {
+            println!("Handle config file passed to login, {:?}", config_file);
+            // Temporary default values for testing
+            id = String::from("app.id.383");
+            name = String::from("Test App");
+            vendor = String::from("MaidSafe.net Ltd.");
+            let mut permissions = BTreeSet::new();
+            permissions.insert(Permission::Read);
+            permissions.insert(Permission::Insert);
+            permissions.insert(Permission::Delete);
+            permissions.insert(Permission::Update);
+            permissions.insert(Permission::ManagePermissions);
+
+            containers.insert(String::from("_public"), permissions.clone());
+            containers.insert(String::from("_publicNames"), permissions.clone());
+            own_container = false;
+        }
+        None => {
+            println!("{}", style("Enter app ID:").cyan().bold());
+            id = read_line(&mut id);
+
+            println!("{}", style("Enter app name:").cyan().bold());
+            name = read_line(&mut name);
+
+            println!("{}", style("Enter app vendor name:").cyan().bold());
+            vendor = read_line(&mut vendor);
+
+            println!("{}", style("Enter app scope (optional):").cyan().bold());
+            scope = read_line(&mut scope);
+
+            let mut user_container_dec = String::new();
+            println!("{} {:?}", style("Creating permissions for").cyan(), style(&name).cyan());
+            println!("{}", style("Create root container for app? y/n").cyan().bold());
+            user_container_dec = read_line(&mut user_container_dec);
+
+            let mut permissions = BTreeSet::new();
+            permissions.insert(Permission::Read);
+            permissions.insert(Permission::Insert);
+            permissions.insert(Permission::Delete);
+            permissions.insert(Permission::Update);
+            permissions.insert(Permission::ManagePermissions);
+
+            containers.insert(String::from("_public"), permissions.clone());
+            containers.insert(String::from("_publicNames"), permissions.clone());
+            own_container = match user_container_dec.trim() {
+                "y" => true,
+                "n" => false,
+                _ => false,
+            };
+        }
+    }
+
+    let app_info = AppExchangeInfo {
+        id: id,
+        name: name,
+        vendor: vendor,
+        scope: match scope.len() {
+            0 => None,
+            _ => Some(scope),
+        },
+    };
+
+    let auth_req = AuthReq {
+        app: app_info,
+        app_container: own_container,
+        containers: containers,
+    };
+    let req_id = gen_req_id();
+    let encoded_auth_req = encode_msg(&IpcMsg::Req{ req_id, req: IpcReq::Auth(auth_req) }).unwrap();
+    println!("encoded_auth_req: {:?}", &encoded_auth_req);
+
+    actix::run(move || {
+        client::post(format!("http://localhost:41805/authorise/{}", &encoded_auth_req))
+            .finish()
+            .unwrap()
+            .send()
+            .map_err(|err| {
+                println!("App client error: {:?}", err);
+            })
+            .and_then(|response| {
+                response
+                    .body()
+                    .map(move |body| (response, body))
+                    .map_err(|e| println!("Error: {:?}", e))
+                    .and_then(|(response, body)| {
+                        println!("Response: {:?}, Body: {:?}", response, body);
+                        Ok(())
+                    })
+                    .map(|_| actix::System::current().stop())
+            })
     });
 }

@@ -1,11 +1,19 @@
 extern crate actix_web;
 extern crate console;
+extern crate futures;
 extern crate safe_authenticator;
+#[macro_use]
+extern crate safe_core;
 
-use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path};
+use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path, FutureResponse, Either, AsyncResponder, Responder};
 use console::style;
 use safe_authenticator::{AuthError, Authenticator};
+use safe_authenticator::ipc::decode_ipc_msg;
+use safe_core::FutureExt;
+use safe_core::ipc::{decode_msg, IpcMsg};
+use safe_core::ipc::req::{IpcReq};
 use std::sync::{Arc, Mutex};
+use futures::future::{Future, result};
 
 struct AuthenticatorStruct {
     handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>,
@@ -47,6 +55,37 @@ fn login(info: Path<(String, String)>, req: HttpRequest<AuthenticatorStruct>) ->
     }
 }
 
+fn authorise(auth_req: Path<String>, req: HttpRequest<AuthenticatorStruct>) -> Either<FutureResponse<HttpResponse>, HttpResponse> {
+    let decoded_req = decode_msg(auth_req.as_ref()).unwrap();
+    println!("decoded_req: {:?}", decoded_req);
+    let auth = &*(req.state().handle.lock().unwrap());
+    match auth {
+        Some(Ok(auth_handle)) => {
+                auth_handle.send(move |client| {
+                    decode_ipc_msg(client, decoded_req)
+                        .and_then(move |msg| {
+                            println!("msg after decode_ipc_msg: {:?}", msg);
+                            // result(
+                            //     Ok(HttpResponse::Ok().body("auth requ received"))
+                            // ).responder();
+                            ok!(())
+                        }).map_err(move |err| {
+                            println!("decode_ipc_msg error: {:?}", err);
+                        }).into_box()
+                        .into()
+                }).unwrap();
+            Either::B(
+                HttpResponse::Ok().body("auth requ received")
+            )
+        },
+        _ => {
+            Either::B(
+                HttpResponse::Ok().body("Some kind of authorise error.")
+            )
+        },
+    }
+}
+
 fn index(_req: HttpRequest<AuthenticatorStruct>) -> &'static str {
     "Hello, world!"
 }
@@ -67,9 +106,48 @@ fn main() {
         .resource("/create_acc/{locator}/{password}/{invite}", |r| {
             r.method(Method::POST).with(create_acc);
         })
+        .resource("/authorise/{auth_req}", |r| {
+            r.method(Method::POST).with(authorise);
+        })
         .finish()
     })
     .bind("127.0.0.1:41805")
     .unwrap()
     .run();
 }
+                // decode_ipc_msg(client, decoded_req)
+                //     .and_then(move |msg| match msg {
+                //         Ok(IpcMsg::Req {
+                //             req: IpcReq::Auth(auth_req),
+                //             req_id,
+                //         }) => {
+                //             ok!(())
+                //         }
+                //         Ok(IpcMsg::Req {
+                //             req: IpcReq::Containers(cont_req),
+                //             req_id,
+                //         }) => {
+                //             ok!(())
+                //         }
+                //         Ok(IpcMsg::Req {
+                //             req: IpcReq::Unregistered(extra_data),
+                //             req_id,
+                //         }) => {
+                //             ok!(())
+                //         }
+                //         Ok(IpcMsg::Req {
+                //             req: IpcReq::ShareMData(share_mdata_req),
+                //             req_id,
+                //         }) => {
+                //             ok!(())     
+                //         },
+                //         Err((error_code, description, err)) => {
+                //             ok!(())
+                //         }
+                //         Ok(IpcMsg::Resp { .. }) | Ok(IpcMsg::Revoked { .. }) | Ok(IpcMsg::Err(..)) => {
+                //             ok!(())
+                //         }
+                //     }).map_err(move |err| {
+                //         // call_result_cb!(Err::<(), _>(err), user_data, o_err);
+                //     }).into_box()
+                //     .into()

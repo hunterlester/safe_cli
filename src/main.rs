@@ -1,4 +1,4 @@
-mod app;
+// mod app;
 mod authenticator;
 mod helpers;
 
@@ -6,12 +6,12 @@ extern crate actix_web;
 extern crate clap;
 extern crate console;
 extern crate futures;
+extern crate safe_authenticator;
 extern crate safe_core;
 extern crate serde_json;
 extern crate zxcvbn;
 
-use app::initialise;
-use authenticator::{create_acc, login};
+use authenticator::{create_acc, login, authorise};
 use clap::{App, Arg, SubCommand};
 
 fn main() {
@@ -38,11 +38,11 @@ fn main() {
                .min_values(0)
                .help("Create new account with SAFE network with locator, password, and invitation key")))
       .subcommand(
-        SubCommand::with_name("initialise") 
+        SubCommand::with_name("authorise") 
           .arg(Arg::with_name("config_file")
                .takes_value(true)
                .min_values(0)
-               .help("Initialise new SAFE app instance")))
+               .help("Request to authorise SAFE app instance")))
       .get_matches();
 
     match args.subcommand() {
@@ -56,10 +56,10 @@ fn main() {
                 None => create_acc(None),
             }
         }
-        ("initialise", Some(initialise_matches)) => {
-            match initialise_matches.value_of("config_file") {
-                Some(config_file) => initialise(Some(config_file)),
-                None => initialise(None),
+        ("authorise", Some(authorise_matches)) => {
+            match authorise_matches.value_of("config_file") {
+                Some(config_file) => authorise(Some(config_file)),
+                None => authorise(None),
             }
         }
         ("", None) => (),
