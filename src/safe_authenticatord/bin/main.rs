@@ -4,8 +4,9 @@ extern crate futures;
 extern crate safe_authenticator;
 #[macro_use]
 extern crate safe_core;
+extern crate serde_json;
 
-use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path, FutureResponse, Either, AsyncResponder, Responder};
+use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path};
 use console::style;
 use safe_authenticator::{AuthError, Authenticator};
 use safe_authenticator::ipc::decode_ipc_msg;
@@ -13,7 +14,7 @@ use safe_core::FutureExt;
 use safe_core::ipc::{decode_msg, IpcMsg};
 use safe_core::ipc::req::{IpcReq};
 use std::sync::{Arc, Mutex};
-use futures::future::{Future, result};
+use futures::future::Future;
 
 struct AuthenticatorStruct {
     handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>,
@@ -55,33 +56,29 @@ fn login(info: Path<(String, String)>, req: HttpRequest<AuthenticatorStruct>) ->
     }
 }
 
-fn authorise(auth_req: Path<String>, req: HttpRequest<AuthenticatorStruct>) -> Either<FutureResponse<HttpResponse>, HttpResponse> {
+fn authorise(auth_req: Path<String>, req: HttpRequest<AuthenticatorStruct>) -> HttpResponse {
     let decoded_req = decode_msg(auth_req.as_ref()).unwrap();
-    println!("decoded_req: {:?}", decoded_req);
     let auth = &*(req.state().handle.lock().unwrap());
     match auth {
         Some(Ok(auth_handle)) => {
-                auth_handle.send(move |client| {
-                    decode_ipc_msg(client, decoded_req)
-                        .and_then(move |msg| {
-                            println!("msg after decode_ipc_msg: {:?}", msg);
-                            // result(
-                            //     Ok(HttpResponse::Ok().body("auth requ received"))
-                            // ).responder();
-                            ok!(())
-                        }).map_err(move |err| {
-                            println!("decode_ipc_msg error: {:?}", err);
-                        }).into_box()
-                        .into()
-                }).unwrap();
-            Either::B(
-                HttpResponse::Ok().body("auth requ received")
-            )
+            let ipc_msg : Arc<Mutex<Option<IpcMsg>>> = Arc::new(Mutex::new(None));
+            let ipc_msg_clone = ipc_msg.clone();
+            auth_handle.send(move |client| {
+                decode_ipc_msg(client, decoded_req)
+                    .and_then(move |msg| {
+                        *ipc_msg_clone.lock().unwrap() = Some(msg.unwrap());
+                        ok!(())
+                    }).map_err(move |err| {
+                        println!("decode_ipc_msg error: {:?}", err);
+                    }).into_box()
+                    .into()
+            }).unwrap();
+            while let None = *(ipc_msg.lock().unwrap()) {};
+            let response_str = &*(ipc_msg.lock().unwrap());
+            HttpResponse::Ok().json(response_str)
         },
         _ => {
-            Either::B(
-                HttpResponse::Ok().body("Some kind of authorise error.")
-            )
+            HttpResponse::Ok().body("Some kind of authorise error.")
         },
     }
 }
