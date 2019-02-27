@@ -11,7 +11,7 @@ extern crate safe_core;
 extern crate serde_json;
 extern crate zxcvbn;
 
-use authenticator::{create_acc, login, authorise};
+use authenticator::{authorise, create_acc, login};
 use clap::{App, Arg, SubCommand};
 
 fn main() {
@@ -56,12 +56,10 @@ fn main() {
                 None => create_acc(None),
             }
         }
-        ("authorise", Some(authorise_matches)) => {
-            match authorise_matches.value_of("config_file") {
-                Some(config_file) => authorise(Some(config_file)),
-                None => authorise(None),
-            }
-        }
+        ("authorise", Some(authorise_matches)) => match authorise_matches.value_of("config_file") {
+            Some(config_file) => authorise(Some(config_file)),
+            None => authorise(None),
+        },
         ("", None) => (),
         _ => (),
     };

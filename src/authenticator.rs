@@ -2,13 +2,13 @@ use crate::helpers::read_line;
 use actix_web::{actix, client, HttpMessage};
 use console::style;
 use futures::Future;
+use safe_core::ipc::req::{AppExchangeInfo, AuthReq, IpcReq, Permission};
+use safe_core::ipc::{encode_msg, gen_req_id, IpcMsg};
+use std::collections::{BTreeSet, HashMap};
 use std::env::current_dir;
 use std::process::Command;
 use std::{thread, time};
 use zxcvbn::zxcvbn;
-use safe_core::ipc::req::{AppExchangeInfo, Permission, AuthReq, IpcReq};
-use safe_core::ipc::{IpcMsg, encode_msg, gen_req_id};
-use std::collections::{ BTreeSet, HashMap };
 
 fn validate_cred(cred: &'static str) -> String {
     println!(
@@ -253,7 +253,6 @@ pub fn login(config_file_option: Option<&str>) {
     });
 }
 
-
 pub fn authorise(config_file_option: Option<&str>) {
     let mut id = String::new();
     let mut name = String::new();
@@ -293,8 +292,15 @@ pub fn authorise(config_file_option: Option<&str>) {
             scope = read_line(&mut scope);
 
             let mut user_container_dec = String::new();
-            println!("{} {:?}", style("Creating permissions for").cyan(), style(&name).cyan());
-            println!("{}", style("Create root container for app? y/n").cyan().bold());
+            println!(
+                "{} {:?}",
+                style("Creating permissions for").cyan(),
+                style(&name).cyan()
+            );
+            println!(
+                "{}",
+                style("Create root container for app? y/n").cyan().bold()
+            );
             user_container_dec = read_line(&mut user_container_dec);
 
             let mut permissions = BTreeSet::new();
@@ -330,27 +336,34 @@ pub fn authorise(config_file_option: Option<&str>) {
         containers: containers,
     };
     let req_id = gen_req_id();
-    let encoded_auth_req = encode_msg(&IpcMsg::Req{ req_id, req: IpcReq::Auth(auth_req) }).unwrap();
+    let encoded_auth_req = encode_msg(&IpcMsg::Req {
+        req_id,
+        req: IpcReq::Auth(auth_req),
+    })
+    .unwrap();
     println!("encoded_auth_req: {:?}", &encoded_auth_req);
 
     actix::run(move || {
-        client::post(format!("http://localhost:41805/authorise/{}", &encoded_auth_req))
-            .finish()
-            .unwrap()
-            .send()
-            .map_err(|err| {
-                println!("App client error: {:?}", err);
-            })
-            .and_then(|response| {
-                response
-                    .body()
-                    .map(move |body| (response, body))
-                    .map_err(|e| println!("Error: {:?}", e))
-                    .and_then(|(response, body)| {
-                        println!("Response: {:?}, Body: {:?}", response, body);
-                        Ok(())
-                    })
-                    .map(|_| actix::System::current().stop())
-            })
+        client::post(format!(
+            "http://localhost:41805/authorise/{}",
+            &encoded_auth_req
+        ))
+        .finish()
+        .unwrap()
+        .send()
+        .map_err(|err| {
+            println!("App client error: {:?}", err);
+        })
+        .and_then(|response| {
+            response
+                .body()
+                .map(move |body| (response, body))
+                .map_err(|e| println!("Error: {:?}", e))
+                .and_then(|(response, body)| {
+                    println!("Response: {:?}, Body: {:?}", response, body);
+                    Ok(())
+                })
+                .map(|_| actix::System::current().stop())
+        })
     });
 }
