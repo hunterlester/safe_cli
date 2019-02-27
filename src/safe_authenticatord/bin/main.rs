@@ -14,8 +14,9 @@ use safe_authenticator::ipc::decode_ipc_msg;
 use safe_authenticator::{AuthError, Authenticator};
 use safe_core::ipc::req::{AuthReq, IpcReq};
 use safe_core::ipc::resp::{AuthGranted, IpcResp};
-use safe_core::ipc::{decode_msg, IpcMsg};
+use safe_core::ipc::{decode_msg, encode_msg, IpcMsg};
 use safe_core::FutureExt;
+use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 
 struct AuthenticatorStruct {
@@ -67,31 +68,36 @@ fn authorise(
         &*(http_req.state().handle.lock().unwrap());
     match authenticator {
         Some(Ok(auth_handle)) => {
-            let ipc_msg: Arc<Mutex<Option<IpcMsg>>> = Arc::new(Mutex::new(None));
+            let ipc_msg: Arc<Mutex<Option<Value>>> = Arc::new(Mutex::new(None));
             let ipc_msg_clone = ipc_msg.clone();
             auth_handle
                 .send(move |client| {
                     let c1 = client.clone();
+                    let c2 = client.clone();
                     decode_ipc_msg(&c1, decoded_req)
                         .and_then(move |msg| match msg {
                             Ok(IpcMsg::Req {
                                 req: IpcReq::Auth(auth_req),
                                 req_id,
-                            }) => authenticate(&client, auth_req).then(move |res| {
-                                match res {
-                                    Ok(auth_granted) => {
-                                        let resp = IpcMsg::Resp {
-                                            req_id,
-                                            resp: IpcResp::Auth(Ok(auth_granted)),
-                                        };
-                                        *ipc_msg_clone.lock().unwrap() = Some(resp);
-                                    }
-                                    Err(err) => {
-                                        println!("Authentication error: {:?}", err);
-                                    }
-                                };
-                                ok!(())
-                            }),
+                            }) => authenticate(&c2, auth_req)
+                                .then(move |res| {
+                                    match res {
+                                        Ok(auth_granted) => {
+                                            let resp = IpcMsg::Resp {
+                                                req_id,
+                                                resp: IpcResp::Auth(Ok(auth_granted)),
+                                            };
+                                            let encoded_resp = encode_msg(&resp).unwrap();
+                                            let json_resp = json!({ "authResp": encoded_resp });
+                                            *ipc_msg_clone.lock().unwrap() = Some(json_resp);
+                                        }
+                                        Err(err) => {
+                                            println!("Authentication error: {:?}", err);
+                                        }
+                                    };
+                                    Ok(())
+                                })
+                                .into_box(),
                             Ok(IpcMsg::Req {
                                 req: IpcReq::Containers(cont_req),
                                 req_id,
