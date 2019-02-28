@@ -1,21 +1,13 @@
-extern crate actix_web;
-extern crate console;
-extern crate futures;
-extern crate safe_authenticator;
-#[macro_use]
-extern crate safe_core;
-extern crate serde_json;
-
 use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Path};
 use console::style;
-use futures::future::{err, ok, Future};
+use futures::future::Future;
 use safe_authenticator::app_auth::authenticate;
 use safe_authenticator::ipc::decode_ipc_msg;
 use safe_authenticator::{AuthError, Authenticator};
-use safe_core::ipc::req::{AuthReq, IpcReq};
-use safe_core::ipc::resp::{AuthGranted, IpcResp};
+use safe_core::ipc::req::IpcReq;
+use safe_core::ipc::resp::IpcResp;
 use safe_core::ipc::{decode_msg, encode_msg, IpcMsg};
-use safe_core::FutureExt;
+use safe_core::{ok, FutureExt};
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 

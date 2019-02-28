@@ -1,7 +1,3 @@
-extern crate actix_web;
-extern crate console;
-extern crate safe_core;
-
 use actix_web::{http::Method, server, App, HttpRequest, HttpResponse, Json};
 use std::sync::{Arc, Mutex};
 

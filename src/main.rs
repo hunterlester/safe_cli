@@ -2,16 +2,7 @@
 mod authenticator;
 mod helpers;
 
-extern crate actix_web;
-extern crate clap;
-extern crate console;
-extern crate futures;
-extern crate safe_authenticator;
-extern crate safe_core;
-extern crate serde_json;
-extern crate zxcvbn;
-
-use authenticator::{authorise, create_acc, login};
+use crate::authenticator::{authorise, create_acc, login};
 use clap::{App, Arg, SubCommand};
 
 fn main() {
