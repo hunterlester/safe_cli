@@ -16,13 +16,4 @@
 ##### Development dependencies
 - `rustc v1.32.0`
 
-##### Goals
-- Become more familiar with [safe_client_libs](https://github.com/maidsafe/safe_client_libs)
-- Gain more experience and proficiency in programming with Rust
-- Potentially evolve client layer for apps that don't need FFI layer from client library
-- Implement Clippy to improve code and introduce perspective for how to think differently about coding in Rust
-- Receive feedback from SAFE network community about desired features
-- Research how specific components may have already been developed, for example Chromium's IPC management
-
-
 See [DESIGN](https://github.com/hunterlester/safe_cli/blob/master/DESIGN.md) doc

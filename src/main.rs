@@ -1,4 +1,3 @@
-// mod app;
 mod authenticator;
 mod helpers;
 
@@ -33,7 +32,7 @@ fn main() {
           .arg(Arg::with_name("config_file")
                .takes_value(true)
                .min_values(0)
-               .help("Request to authorise SAFE app instance")))
+               .help("Returns encoded authorisation response to be used to connect to SAFE network")))
       .get_matches();
 
     match args.subcommand() {

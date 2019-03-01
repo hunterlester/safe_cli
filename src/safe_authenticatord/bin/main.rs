@@ -118,7 +118,8 @@ fn authorise(
             let response_str = &*(ipc_msg.lock().unwrap());
             HttpResponse::Ok().json(response_str)
         }
-        _ => HttpResponse::Ok().body("Some kind of authorise error."),
+        Some(Err(auth_error)) => HttpResponse::Ok().body(format!("{}", auth_error)),
+        None => HttpResponse::Ok().body("Authenticator is not logged in."),
     }
 }
 

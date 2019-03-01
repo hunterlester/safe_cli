@@ -20,10 +20,6 @@ use-mock-routing = ["safe_authenticator/use-mock-routing"]
 default = ["use-mock-routing"]
 
 [[bin]]
-name = "safe_appd"
-path = "src/safe_appd/bin/main.rs"
-
-[[bin]]
 name = "safe_authenticatord"
 path = "src/safe_authenticatord/bin/main.rs"
 
