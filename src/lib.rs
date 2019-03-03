@@ -29,7 +29,7 @@ pub fn create_acc(
         Err(auth_error) => {
             let response_string = format!("Failed to create account: {} ", &auth_error);
             *(req.state().handle.lock().unwrap()) = Some(Err(auth_error));
-            HttpResponse::Ok().body(response_string)
+            HttpResponse::BadRequest().body(response_string)
         }
     }
 }
@@ -46,7 +46,7 @@ pub fn login(info: Path<(String, String)>, req: HttpRequest<AuthenticatorStruct>
             let response_string = format!("Login failed: {} ", &auth_error);
             *(req.state().handle.lock().unwrap()) = Some(Err(auth_error));
             // format!("Login failed: {}", &auth_error)
-            HttpResponse::Ok().body(response_string)
+            HttpResponse::BadRequest().body(response_string)
         }
     }
 }
@@ -118,49 +118,11 @@ pub fn authorise(
             let response_str = &*(ipc_msg.lock().unwrap());
             HttpResponse::Ok().json(response_str)
         }
-        Some(Err(auth_error)) => HttpResponse::Ok().body(format!("{}", auth_error)),
-        None => HttpResponse::Ok().body("Authenticator is not logged in."),
+        Some(Err(auth_error)) => HttpResponse::BadRequest().body(format!("{}", auth_error)),
+        None => HttpResponse::BadRequest().body("Authenticator is not logged in."),
     }
 }
 
 pub fn index(_req: HttpRequest<AuthenticatorStruct>) -> HttpResponse {
     HttpResponse::Ok().body("Hello, world!")
-}
-
-// Following are integration tests which isn't the Rust convention. Should be unit tests.
-#[cfg(test)]
-mod tests {
-    use crate::lib::{authorise, create_acc, index, login, AuthenticatorStruct};
-    use actix_web::{http::Method, test, App};
-    use safe_authenticator::{AuthError, Authenticator};
-    use std::sync::{Arc, Mutex};
-
-    fn create_test_service() -> App<AuthenticatorStruct> {
-        let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> =
-            Arc::new(Mutex::new(None));
-        App::with_state(AuthenticatorStruct {
-            handle: handle.clone(),
-        })
-        .resource("/", |r| {
-            r.method(Method::GET).with(index);
-        })
-        .resource("/login/{locator}/{password}", |r| {
-            r.method(Method::POST).with(login);
-        })
-        .resource("/create_acc/{locator}/{password}/{invite}", |r| {
-            r.method(Method::POST).with(create_acc);
-        })
-        .resource("/authorise/{auth_req}", |r| {
-            r.method(Method::POST).with(authorise);
-        })
-    }
-
-    #[test]
-    fn test() {
-        let mut srv = test::TestServer::with_factory(create_test_service);
-        let request = srv.client(Method::GET, "/").finish().unwrap();
-        let response = srv.execute(request.send()).unwrap();
-
-        assert!(response.status().is_success());
-    }
 }

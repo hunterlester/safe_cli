@@ -1,4 +1,4 @@
-#### SAFE CLI
+#### SAFE Authenticator Service
 
 #### Notes:
 - This program compiles for `mock-routing` by default. Do not attempt to use it with the live network until protection of secret credentials is implemented.
