@@ -24,9 +24,9 @@ fn main() {
         .resource("/authorise/{auth_req}", |r| {
             r.method(Method::POST).with(authorise);
         })
-        .default_resource(|r|
+        .default_resource(|r| {
             r.f(|req| HttpResponse::NotFound().body("Service endpoint not found."))
-        )
+        })
         .finish()
     })
     .bind("127.0.0.1:41805")

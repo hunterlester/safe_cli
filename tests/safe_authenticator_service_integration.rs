@@ -1,13 +1,12 @@
 use actix_web::{http::Method, test, App, HttpMessage};
 use rand::Rng;
-use safe_cli::{authorise, create_acc, index, login, AuthenticatorStruct};
 use safe_authenticator::{AuthError, Authenticator};
-use std::sync::{Arc, Mutex};
+use safe_cli::{authorise, create_acc, index, login, AuthenticatorStruct};
 use std::str::from_utf8;
+use std::sync::{Arc, Mutex};
 
 fn create_test_service() -> App<AuthenticatorStruct> {
-    let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> =
-        Arc::new(Mutex::new(None));
+    let handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>> = Arc::new(Mutex::new(None));
     App::with_state(AuthenticatorStruct {
         handle: handle.clone(),
     })
@@ -57,7 +56,10 @@ fn post_login() {
     let mut srv = test::TestServer::with_factory(create_test_service);
 
     let create_acc_endpoint = format!("/create_acc/{}/{}/{}", locator, password, invite);
-    let create_acc_request = srv.client(Method::POST, &create_acc_endpoint).finish().unwrap();
+    let create_acc_request = srv
+        .client(Method::POST, &create_acc_endpoint)
+        .finish()
+        .unwrap();
     let create_acc_response = srv.execute(create_acc_request.send()).unwrap();
 
     assert!(create_acc_response.status().is_success());
@@ -79,7 +81,10 @@ fn post_authorise() {
     let mut srv = test::TestServer::with_factory(create_test_service);
 
     let create_acc_endpoint = format!("/create_acc/{}/{}/{}", locator, password, invite);
-    let create_acc_request = srv.client(Method::POST, &create_acc_endpoint).finish().unwrap();
+    let create_acc_request = srv
+        .client(Method::POST, &create_acc_endpoint)
+        .finish()
+        .unwrap();
     let create_acc_response = srv.execute(create_acc_request.send()).unwrap();
 
     assert!(create_acc_response.status().is_success());
