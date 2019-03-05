@@ -1,11 +1,76 @@
 use crate::helpers::read_line;
-use actix_web::{actix, client, HttpMessage};
+use actix::prelude::*;
+use actix_web::ws::{Client, ClientWriter, Message as MessageEnum, ProtocolError};
+use actix_web::{client, HttpMessage};
 use console::style;
 use futures::Future;
 use safe_core::ipc::req::{AppExchangeInfo, AuthReq, IpcReq, Permission};
 use safe_core::ipc::{encode_msg, gen_req_id, IpcMsg};
 use std::collections::{BTreeSet, HashMap};
+use std::time::Duration;
+use std::{io, thread};
 use zxcvbn::zxcvbn;
+
+struct ChatClient(ClientWriter);
+
+#[derive(Message)]
+struct ClientCommand(String);
+
+impl Actor for ChatClient {
+    type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        // start heartbeats otherwise server will disconnect after 10 seconds
+        self.hb(ctx)
+    }
+
+    fn stopped(&mut self, _: &mut Context<Self>) {
+        println!("Disconnected");
+
+        // Stop application on disconnect
+        System::current().stop();
+    }
+}
+
+impl ChatClient {
+    fn hb(&self, ctx: &mut Context<Self>) {
+        ctx.run_later(Duration::new(1, 0), |act, ctx| {
+            act.0.ping("");
+            act.hb(ctx);
+
+            // client should also check for a timeout here, similar to the
+            // server code
+        });
+    }
+}
+
+/// Handle stdin commands
+impl Handler<ClientCommand> for ChatClient {
+    type Result = ();
+
+    fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
+        self.0.text(msg.0)
+    }
+}
+
+/// Handle server websocket messages
+impl StreamHandler<MessageEnum, ProtocolError> for ChatClient {
+    fn handle(&mut self, msg: MessageEnum, ctx: &mut Context<Self>) {
+        match msg {
+            MessageEnum::Text(txt) => println!("Server: {:?}", txt),
+            _ => (),
+        }
+    }
+
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        println!("Connected");
+    }
+
+    fn finished(&mut self, ctx: &mut Context<Self>) {
+        println!("Server disconnected");
+        ctx.stop()
+    }
+}
 
 fn validate_cred(cred: &'static str) -> String {
     println!(
@@ -274,7 +339,7 @@ pub fn authorise(config_file_option: Option<&str>) {
 
     actix::run(move || {
         client::post(format!(
-            "http://localhost:41805/authorise/{}",
+            "http://localhost:41805/authorise/{}?auth_granted=true",
             &encoded_auth_req
         ))
         .finish()
@@ -299,4 +364,37 @@ pub fn authorise(config_file_option: Option<&str>) {
                 })
         }).map(|_| actix::System::current().stop())
     });
+}
+
+pub fn web_socket(config_file_option: Option<&str>) {
+    let sys = actix::System::new("ws-example");
+
+    Arbiter::spawn(
+        Client::new("http://localhost:41805/ws")
+            .connect()
+            .map_err(|e| {
+                println!("Web socket error: {}", e);
+                ()
+            })
+            .map(|(reader, writer)| {
+                let addr = ChatClient::create(|ctx| {
+                    ChatClient::add_stream(reader, ctx);
+                    ChatClient(writer)
+                });
+
+                // start console loop
+                thread::spawn(move || loop {
+                    let mut cmd = String::new();
+                    if io::stdin().read_line(&mut cmd).is_err() {
+                        println!("error");
+                        return;
+                    }
+                    addr.do_send(ClientCommand(cmd));
+                });
+
+                ()
+            }),
+    );
+
+    let _ = sys.run();
 }

@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, Path};
+use actix_web::{actix::*, ws, Error, HttpRequest, HttpResponse, Path};
 use console::style;
 use futures::future::Future;
 use safe_authenticator::app_auth::authenticate;
@@ -10,9 +10,77 @@ use safe_core::ipc::{decode_msg, encode_msg, IpcMsg};
 use safe_core::{ok, FutureExt};
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+// How often heartbeat pings are sent
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+// How long before lack of client response causes a timeout
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct AuthenticatorStruct {
     pub handle: Arc<Mutex<Option<Result<Authenticator, AuthError>>>>,
+}
+
+struct WebSocket {
+    hb: Instant,
+}
+
+impl Actor for WebSocket {
+    type Context = ws::WebsocketContext<Self, AuthenticatorStruct>;
+
+    /// Method is called on actor start. We start the heartbeat process here.
+    fn started(&mut self, ctx: &mut Self::Context) {
+        self.hb(ctx);
+    }
+}
+
+/// Handler for `ws::Message`
+impl StreamHandler<ws::Message, ws::ProtocolError> for WebSocket {
+    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        // process websocket messages
+        println!("WS: {:?}", msg);
+        match msg {
+            ws::Message::Ping(msg) => {
+                self.hb = Instant::now();
+                ctx.pong(&msg);
+            }
+            ws::Message::Pong(_) => {
+                self.hb = Instant::now();
+            }
+            ws::Message::Text(text) => ctx.text(text),
+            ws::Message::Binary(bin) => ctx.binary(bin),
+            ws::Message::Close(_) => {
+                ctx.stop();
+            }
+        }
+    }
+}
+
+impl WebSocket {
+    fn new() -> Self {
+        Self { hb: Instant::now() }
+    }
+
+    /// helper method that sends ping to client every second.
+    ///
+    /// also this method checks heartbeats from client
+    fn hb(&self, ctx: &mut <Self as Actor>::Context) {
+        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+            // check client heartbeats
+            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
+                // heartbeat timed out
+                println!("Websocket Client heartbeat failed, disconnecting!");
+
+                // stop actor
+                ctx.stop();
+
+                // don't try to send a ping
+                return;
+            }
+
+            ctx.ping("");
+        });
+    }
 }
 
 pub fn create_acc(
@@ -45,7 +113,6 @@ pub fn login(info: Path<(String, String)>, req: HttpRequest<AuthenticatorStruct>
         Err(auth_error) => {
             let response_string = format!("Login failed: {} ", &auth_error);
             *(req.state().handle.lock().unwrap()) = Some(Err(auth_error));
-            // format!("Login failed: {}", &auth_error)
             HttpResponse::BadRequest().body(response_string)
         }
     }
@@ -56,6 +123,16 @@ pub fn authorise(
     http_req: HttpRequest<AuthenticatorStruct>,
 ) -> HttpResponse {
     let decoded_req = decode_msg(authenticator_req.as_ref()).unwrap();
+    let auth_granted: bool = match http_req.query().get("auth_granted") {
+        Some(is_granted) => {
+            if is_granted.contains("true") {
+                true
+            } else {
+                false
+            }
+        }
+        None => false,
+    };
     let authenticator: &Option<Result<Authenticator, AuthError>> =
         &*(http_req.state().handle.lock().unwrap());
     match authenticator {
@@ -71,25 +148,35 @@ pub fn authorise(
                             Ok(IpcMsg::Req {
                                 req: IpcReq::Auth(auth_req),
                                 req_id,
-                            }) => authenticate(&c2, auth_req)
-                                .then(move |res| {
-                                    match res {
-                                        Ok(auth_granted) => {
-                                            let resp = IpcMsg::Resp {
-                                                req_id,
-                                                resp: IpcResp::Auth(Ok(auth_granted)),
+                            }) => {
+                                if auth_granted {
+                                    authenticate(&c2, auth_req)
+                                        .then(move |res| {
+                                            match res {
+                                                Ok(auth_granted) => {
+                                                    let resp = IpcMsg::Resp {
+                                                        req_id,
+                                                        resp: IpcResp::Auth(Ok(auth_granted)),
+                                                    };
+                                                    let encoded_resp = encode_msg(&resp).unwrap();
+                                                    let json_resp =
+                                                        json!({ "authResp": encoded_resp });
+                                                    *ipc_msg_clone.lock().unwrap() =
+                                                        Some(json_resp);
+                                                }
+                                                Err(err) => {
+                                                    println!("Authentication error: {:?}", err);
+                                                }
                                             };
-                                            let encoded_resp = encode_msg(&resp).unwrap();
-                                            let json_resp = json!({ "authResp": encoded_resp });
-                                            *ipc_msg_clone.lock().unwrap() = Some(json_resp);
-                                        }
-                                        Err(err) => {
-                                            println!("Authentication error: {:?}", err);
-                                        }
-                                    };
-                                    Ok(())
-                                })
-                                .into_box(),
+                                            Ok(())
+                                        })
+                                        .into_box()
+                                } else {
+                                    *ipc_msg_clone.lock().unwrap() =
+                                        Some(json!({"error": "Auth not granted"}));
+                                    ok!(())
+                                }
+                            }
                             Ok(IpcMsg::Req {
                                 req: IpcReq::Containers(cont_req),
                                 req_id,
@@ -125,4 +212,8 @@ pub fn authorise(
 
 pub fn index(_req: HttpRequest<AuthenticatorStruct>) -> HttpResponse {
     HttpResponse::Ok().body("Hello, world!")
+}
+
+pub fn web_socket(req: HttpRequest<AuthenticatorStruct>) -> Result<HttpResponse, Error> {
+    ws::start(&req, WebSocket::new())
 }

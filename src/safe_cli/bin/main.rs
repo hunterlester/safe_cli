@@ -1,7 +1,7 @@
 mod authenticator;
 mod helpers;
 
-use crate::authenticator::{authorise, create_acc, login};
+use crate::authenticator::{authorise, create_acc, login, web_socket};
 use clap::{App, Arg, SubCommand};
 
 fn main() {
@@ -33,6 +33,12 @@ fn main() {
                .takes_value(true)
                .min_values(0)
                .help("Returns encoded authorisation response to be used to connect to SAFE network")))
+      .subcommand(
+        SubCommand::with_name("ws") 
+          .arg(Arg::with_name("config_file")
+               .takes_value(true)
+               .min_values(0)
+               .help("Starts web socket connection")))
       .get_matches();
 
     match args.subcommand() {
@@ -49,6 +55,10 @@ fn main() {
         ("authorise", Some(authorise_matches)) => match authorise_matches.value_of("config_file") {
             Some(config_file) => authorise(Some(config_file)),
             None => authorise(None),
+        },
+        ("ws", Some(ws_matches)) => match ws_matches.value_of("config_file") {
+            Some(config_file) => web_socket(Some(config_file)),
+            None => web_socket(None),
         },
         ("", None) => (),
         _ => (),

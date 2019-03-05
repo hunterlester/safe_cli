@@ -1,6 +1,6 @@
 mod lib;
 
-use crate::lib::{authorise, create_acc, index, login, AuthenticatorStruct};
+use crate::lib::{authorise, create_acc, index, login, web_socket, AuthenticatorStruct};
 use actix_web::{http::Method, server, App, HttpResponse};
 use safe_authenticator::{AuthError, Authenticator};
 use std::sync::{Arc, Mutex};
@@ -23,6 +23,9 @@ fn main() {
         })
         .resource("/authorise/{auth_req}", |r| {
             r.method(Method::POST).with(authorise);
+        })
+        .resource("/ws", |r| {
+            r.method(Method::GET).with(web_socket);
         })
         .default_resource(|r| {
             r.f(|req| HttpResponse::NotFound().body("Service endpoint not found."))

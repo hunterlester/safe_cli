@@ -5,13 +5,15 @@ authors = ["hunterlester <guilfordhunter@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+actix = "0.7.9"
 actix-web = "0.7.18"
 clap = "2.25.1"
 console = "0.6.1"
 futures = "0.1"
 rand = "0.6.5"
 safe_authenticator = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_authenticator", branch = "safe_authenticator-0.9.0-upgrades" } 
-safe_core = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_core", branch = "safe_authenticator-0.9.0-upgrades" } 
+safe_core = { git = "https://github.com/hunterlester/safe_client_libs", path = "safe_core", branch = "safe_authenticator-0.9.0-upgrades" }
+serde_derive = "1.0.89"
 serde_json = "1.0"
 zxcvbn = "1.0.0"
 
